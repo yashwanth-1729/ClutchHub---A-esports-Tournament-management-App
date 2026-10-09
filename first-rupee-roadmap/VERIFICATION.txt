@@ -1,0 +1,20 @@
+Browser verification — 9 October 2026
+
+- PASS: Working first screen, zero income, no fake progress
+- PASS: Checklist persists after reload
+- PASS: Search and engineering filter show correct routes
+- PASS: Exploration and active-route selection are distinct
+- PASS: Fee/cost arithmetic, ceiling of required jobs and nonpositive-margin branch
+- PASS: Completed-payment log persists, subtracts costs and escapes input
+- PASS: Export / import transfers goal, route, checklist and income
+- PASS: Malformed import preserves current progress
+- PASS: WebMCP tools use shared validation, reject invalid batch atomically and do not fabricate income
+- PASS: All six views fit 1440, 768 and 390px; tables/diagram scroll within their containers
+- PASS: All 22 playbooks render eight steps and four specific readiness checks
+
+Console errors: 0
+Failed local asset requests: 0
+Viewports: 1440, 768, 390 px
+WebMCP tested with an API mock.
+Deployment scripts: bash syntax check passed; remote deployment not executed.
+Vercel publication: HTTP 403. VPS SSH: Network is unreachable. Network escalation: rejected by session policy.
