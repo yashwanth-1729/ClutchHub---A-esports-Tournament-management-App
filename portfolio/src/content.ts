@@ -17,7 +17,7 @@ export const links = {
   instagram: '',
   website: '',
   linkedin: '',
-  resume: '/resume.pdf',
+  resume: 'resume.pdf',
 }
 
 export type ProjectId = 'jarvis' | 'hospital' | 'clutchhub' | 'sldt'

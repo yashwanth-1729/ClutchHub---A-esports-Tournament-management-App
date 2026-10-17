@@ -119,10 +119,12 @@ function frameAt(y: number, out: CameraFrame) {
   return Object.assign(out, anchors[anchors.length - 1].frame)
 }
 
+// The accent is the colour of the disk's light at the current depth: it
+// redshifts from white to orange as you fall, and goes red when locked in.
 const heatStops = [
-  [236, 230, 219], // tungsten white
-  [255, 160, 92],
-  [255, 120, 52], // sodium
+  [244, 236, 222], // seen from far away: near white
+  [255, 178, 112],
+  [255, 128, 64], // deep: sodium orange
   [255, 52, 34], // lock-in red
 ]
 function accentFor(heat: number, lock: number) {

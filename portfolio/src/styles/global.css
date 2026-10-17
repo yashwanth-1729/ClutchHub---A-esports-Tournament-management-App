@@ -12,7 +12,8 @@
   --fg-3: rgb(var(--ink) / 0.5);
   --rule: rgb(var(--ink) / 0.16);
   --accent: rgb(var(--accent-rgb));
-  --pencil: #ff5b3a;
+  /* annotations take the colour of the light at your depth: redshifted, never decorative */
+  --pencil: var(--accent);
   --red: #ff3d26;
 
   --gutter: clamp(18px, 4vw, 64px);
