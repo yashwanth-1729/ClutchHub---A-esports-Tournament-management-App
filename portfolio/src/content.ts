@@ -14,7 +14,7 @@ export const links = {
   email: 'cherukuriyashwanthraj@gmail.com',
   github: 'https://github.com/yashwanth-1729',
   // Empty strings are hidden until filled in.
-  instagram: '',
+  instagram: 'https://www.instagram.com/yashwanthbuilds/',
   website: '',
   linkedin: '',
   resume: 'resume.pdf',
