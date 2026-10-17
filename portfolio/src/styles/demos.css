@@ -1,8 +1,8 @@
-/* Figures. Hairlines, the serif, and monospace only where the data is literal. */
+/* Figures. Hairlines, Mona Sans for sentences, Monaspace for labels and anything literal. */
 
 .demo-log {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--fs-data);
   line-height: 1.65;
   margin: 16px 0 0;
   padding: 12px 0 0;
@@ -26,7 +26,7 @@
 .ch-foot,
 .sl-actions {
   margin: 16px 0 0;
-  font-size: 17px;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--fg-2);
 }
@@ -52,30 +52,30 @@
   max-width: 30ch;
   min-height: 2.6em;
   text-align: center;
-  font-size: 21px;
-  line-height: 1.25;
-  font-style: italic;
-  font-weight: 300;
-  font-variation-settings: 'opsz' 36;
+  font-size: var(--fs-lede);
+  line-height: 1.28;
+  font-weight: 340;
+  letter-spacing: -0.012em;
 }
 .jv-bubble:lang(te) {
-  font-family: 'Noto Serif Telugu', 'Noto Sans Telugu', 'Nirmala UI', 'Gautami', var(--serif);
-  font-style: normal;
-  font-size: 18px;
-  line-height: 1.55;
+  font-family: 'Noto Sans Telugu', 'Nirmala UI', 'Gautami', var(--text);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  letter-spacing: 0;
 }
 .jv-state {
   position: absolute;
   top: 0;
   right: 0;
   margin: 0;
-  font-style: italic;
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
 }
 .jv-controls .act:lang(te) {
-  font-family: 'Noto Serif Telugu', 'Noto Sans Telugu', 'Nirmala UI', var(--serif);
-  font-style: normal;
+  font-family: 'Noto Sans Telugu', 'Nirmala UI', var(--text);
 }
 .jv-hold {
   touch-action: none;
@@ -92,11 +92,12 @@
 }
 .jv-k {
   margin: 0 0 4px;
-  font-size: 15px;
+  font-size: var(--fs-small);
   color: var(--fg-3);
 }
 .jv-k i {
-  color: var(--fg-2);
+  font-weight: 600;
+  color: var(--fg);
 }
 .jv-row {
   display: grid;
@@ -105,8 +106,10 @@
   gap: 12px;
 }
 .jv-l {
-  font-style: italic;
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
 }
 .jv-track {
@@ -119,7 +122,7 @@
   position: absolute;
   top: 2px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-label);
   color: var(--pencil);
   transition: left 60ms linear;
 }
@@ -142,7 +145,7 @@
   display: grid;
   place-items: center;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-label);
   border-bottom: 1px solid var(--rule);
   color: var(--fg-2);
 }
@@ -155,12 +158,15 @@
   border-bottom: 2px solid var(--pencil);
 }
 .jv-play {
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--fs-data);
   grid-column: span 2;
 }
 .jv-bp {
-  font-style: italic;
-  font-size: 14px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
 }
 .jv-bp.on {
@@ -175,8 +181,13 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  font-size: 17px;
+  font-size: var(--fs-body);
   color: var(--fg-2);
+}
+.hs-head i,
+.ch-head i {
+  font-weight: 600;
+  color: var(--fg);
 }
 .hs-head .mono {
   color: var(--fg-3);
@@ -196,21 +207,26 @@
   border-bottom: 1px solid var(--rule);
   transition: background 0.3s;
 }
-.hs-slot.free:not(:disabled):hover {
+.hs-slot.free:not([aria-disabled='true']):hover {
   background: rgb(var(--ink) / 0.05);
 }
-.hs-slot:disabled {
+.hs-slot[aria-disabled='true'] {
   cursor: default;
 }
 .hs-t {
-  font-size: 22px;
-  font-weight: 300;
-  font-variation-settings: 'opsz' 36;
+  /* Mona at Hubot's width: same figure, but a plain zero */
+  font-family: var(--text);
+  font-stretch: 125%;
+  font-size: var(--fs-lede);
+  font-weight: 500;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 .hs-s {
-  font-style: italic;
-  font-size: 14px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
 }
 .hs-slot.taken .hs-t {
@@ -237,7 +253,7 @@
 
 .ch-head {
   margin: 0 0 12px;
-  font-size: 17px;
+  font-size: var(--fs-body);
   color: var(--fg-2);
 }
 .ch-table {
@@ -251,7 +267,7 @@
   align-items: baseline;
   padding: 7px 2px;
   border-top: 1px solid var(--rule);
-  font-size: 17px;
+  font-size: var(--fs-body);
   position: relative;
   background: transparent;
 }
@@ -261,12 +277,17 @@
 .ch-th {
   border-top: 0;
   border-bottom: 1px solid var(--fg-3);
-  font-style: italic;
-  font-size: 14px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
 }
+.narrow-only {
+  display: none;
+}
 .ch-row.lead .ch-name {
-  font-style: italic;
+  font-weight: 600;
   color: var(--pencil);
 }
 .ch-rank {
@@ -275,8 +296,8 @@
   gap: 6px;
 }
 .ch-rank i {
-  font-style: normal;
-  font-size: 13px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
 }
 .ch-rank i.up {
   color: var(--fg);
@@ -295,7 +316,9 @@
 .ch-total em {
   position: absolute;
   right: calc(100% + 8px);
-  font-size: 14px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
   color: var(--pencil);
   animation: gain 2.6s var(--ease) forwards;
 }
@@ -324,7 +347,7 @@
   margin: 0;
   padding: 10px 2px;
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--fs-data);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
@@ -359,11 +382,15 @@
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 18px;
-  row-gap: 4px;
-  font-size: 16px;
+  row-gap: 6px;
+  align-items: baseline;
+  font-size: var(--fs-small);
 }
 .sl-status dt {
-  font-style: italic;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
 }
 .sl-status dd {
@@ -380,9 +407,38 @@
   }
   .ch-row {
     grid-template-columns: 34px minmax(0, 1fr) 44px 64px 54px;
-    font-size: 15px;
+    font-size: var(--fs-small);
   }
-  .ch-th {
-    font-size: 12px;
+  /* the full word stays for screen readers */
+  .wide-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
+  .narrow-only {
+    display: inline;
+  }
+  /* no room beside the total on a phone; the gain floats above it */
+  .ch-total em {
+    right: 0;
+    top: -1.2em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-slot.contested {
+    animation: none;
+    background: rgb(255 61 38 / 0.16);
+  }
+  .ch-total em {
+    animation-name: gain-still;
+  }
+}
+@keyframes gain-still {
+  0%,
+  80% { opacity: 1; }
+  100% { opacity: 0; }
 }

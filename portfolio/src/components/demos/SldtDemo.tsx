@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { audio } from '../../audio/VoidAudio'
 import { signals } from '../../engine/signals'
+import { state } from '../../engine/engine'
 import { useFrame, useInView } from '../../lib/hooks'
 
 // Real AES-256-GCM and HMAC-SHA256 through the Web Crypto API, the same
@@ -19,8 +20,27 @@ type View = {
   sig: string
   tag: Status
   hmac: Status
+  hash: Status
   error: string
 }
+
+// As in SLDT: a 4-byte big-endian length, then the record, zero-filled to its bucket.
+const BUCKETS = [256, 1024, 4096]
+function pad(text: string) {
+  const body = te.encode(text)
+  const size = BUCKETS.find((b) => b >= body.length + 4) ?? body.length + 4
+  const out = new Uint8Array(size)
+  new DataView(out.buffer).setUint32(0, body.length)
+  out.set(body, 4)
+  return out
+}
+function unpad(bytes: Uint8Array) {
+  const n = new DataView(bytes.buffer, bytes.byteOffset).getUint32(0)
+  return new TextDecoder().decode(bytes.subarray(4, 4 + n))
+}
+// the manifest pins the hash of the stored envelope, not of the plaintext
+const envelopeHash = async (iv: Uint8Array, ct: Uint8Array) =>
+  hex(await crypto.subtle.digest('SHA-256', te.encode(JSON.stringify({ iv: hex(iv).join(''), ct: hex(ct).join('') })))).join('')
 
 function makeRecord() {
   return JSON.stringify(
@@ -41,7 +61,7 @@ export function SldtDemo() {
   const keys = useRef<{ aes: CryptoKey; mac: CryptoKey } | null>(null)
   const sealed = useRef<{ ct: Uint8Array; iv: Uint8Array; manifest: string; sig: ArrayBuffer } | null>(null)
   const record = useRef(makeRecord())
-  const [view, setView] = useState<View>({ cipher: [], plain: record.current, iv: '', sig: '', tag: 'wait', hmac: 'wait', error: '' })
+  const [view, setView] = useState<View>({ cipher: [], plain: record.current, iv: '', sig: '', tag: 'wait', hmac: 'wait', hash: 'wait', error: '' })
   const [tampered, setTampered] = useState(false)
   const lens = useRef<HTMLDivElement>(null)
   const inView = useInView(lens)
@@ -52,15 +72,16 @@ export function SldtDemo() {
   const verify = async (ct: Uint8Array) => {
     const s = sealed.current!
     const k = keys.current!
-    // the manifest pins the ciphertext hash; its signature pins the manifest
-    const digest = hex(await crypto.subtle.digest('SHA-256', ct as BufferSource)).join('')
-    const manifest = JSON.stringify({ id: 'note_0193', iv: hex(s.iv).join(''), sha256: digest })
-    const macOk = await crypto.subtle.verify('HMAC', k.mac, s.sig, te.encode(manifest))
+    // First the signed manifest, which nobody here touches, then the object's
+    // hash against it. A mismatch skips the object before it is ever decrypted.
+    const macOk = await crypto.subtle.verify('HMAC', k.mac, s.sig, te.encode(s.manifest))
+    const hashOk = (await envelopeHash(s.iv, ct)) === (JSON.parse(s.manifest) as { sha256: string }).sha256
     let plain = ''
     let tag: Status = 'ok'
     let error = ''
     try {
-      plain = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: s.iv as BufferSource }, k.aes, ct as BufferSource))
+      // run anyway, to show the second layer would have refused it too
+      plain = unpad(new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: s.iv as BufferSource }, k.aes, ct as BufferSource)))
     } catch (e) {
       tag = 'bad'
       error = (e as Error).name || 'OperationError'
@@ -72,6 +93,7 @@ export function SldtDemo() {
       sig: short(hex(s.sig)),
       tag,
       hmac: macOk ? 'ok' : 'bad',
+      hash: hashOk ? 'ok' : 'bad',
       error,
     })
   }
@@ -79,9 +101,8 @@ export function SldtDemo() {
   const seal = async () => {
     const k = keys.current!
     const iv = crypto.getRandomValues(new Uint8Array(12))
-    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k.aes, te.encode(record.current)))
-    const digest = hex(await crypto.subtle.digest('SHA-256', ct)).join('')
-    const manifest = JSON.stringify({ id: 'note_0193', iv: hex(iv).join(''), sha256: digest })
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k.aes, pad(record.current)))
+    const manifest = JSON.stringify({ id: 'note_0193', revision: 4, sha256: await envelopeHash(iv, ct), deleted: false })
     const sig = await crypto.subtle.sign('HMAC', k.mac, te.encode(manifest))
     sealed.current = { ct, iv, manifest, sig }
     setTampered(false)
@@ -122,6 +143,7 @@ export function SldtDemo() {
   }
 
   // the lens follows the cursor inside the box, and wanders when you leave
+  // (or rests in the middle, with reduced motion)
   useFrame((dt) => {
     const el = lens.current
     if (!el || !inView) return
@@ -130,8 +152,9 @@ export function SldtDemo() {
     let x = p.x
     let y = p.y
     if (!p.inside) {
-      x = el.clientWidth * (0.5 + 0.34 * Math.sin(p.t * 0.6))
-      y = el.clientHeight * (0.5 + 0.3 * Math.sin(p.t * 0.83 + 1))
+      const t = state.reduced ? 0 : p.t
+      x = el.clientWidth * (0.5 + (state.reduced ? 0 : 0.34 * Math.sin(t * 0.6)))
+      y = el.clientHeight * (0.5 + (state.reduced ? 0 : 0.3 * Math.sin(t * 0.83 + 1)))
     }
     el.style.setProperty('--lx', `${x}px`)
     el.style.setProperty('--ly', `${y}px`)
@@ -157,14 +180,15 @@ export function SldtDemo() {
           pointer.current.inside = false
         }}
         data-cursor="decrypting"
+        role="group"
         aria-label="Ciphertext with a lens that reveals the decrypted record"
       >
         <pre className="sl-cipher" aria-hidden="true">
           {view.cipher.join(' ')}
         </pre>
         <pre className="sl-plain">
-          {view.tag === 'bad'
-            ? `decrypt() threw ${view.error}\nthe authentication tag does not match\n\nrecord rejected; the last verified\nversion stays on disk.`
+          {view.hash === 'bad'
+            ? `sha256 of these bytes does not match\nthe one the signed manifest pins.\n\nobject skipped before decryption;\nthe last verified version stays on disk.\n\nforced through decrypt() anyway, the\nGCM tag refuses it too: ${view.error}.`
             : view.plain}
         </pre>
         <span className="sl-ring" aria-hidden="true" />
@@ -172,12 +196,14 @@ export function SldtDemo() {
       <dl className="sl-status">
         <dt>Cipher</dt>
         <dd>AES-256-GCM, IV {view.iv || '…'}</dd>
-        <dt>Tag</dt>
-        <dd className={view.tag}>{view.tag === 'bad' ? `rejected (${view.error})` : view.tag === 'ok' ? 'verified' : '…'}</dd>
         <dt>Manifest</dt>
-        <dd className={view.hmac}>{view.hmac === 'bad' ? 'HMAC-SHA256 mismatch' : `HMAC-SHA256 ${view.sig}`}</dd>
+        <dd className={view.hmac}>{view.hmac === 'wait' ? '…' : view.hmac === 'bad' ? 'HMAC-SHA256 mismatch' : `HMAC-SHA256 ${view.sig}, valid`}</dd>
+        <dt>Object hash</dt>
+        <dd className={view.hash}>{view.hash === 'wait' ? '…' : view.hash === 'bad' ? 'does not match the manifest; object skipped' : 'matches the manifest'}</dd>
+        <dt>Tag</dt>
+        <dd className={view.tag}>{view.tag === 'bad' ? `would reject (${view.error})` : view.tag === 'ok' ? 'verified' : '…'}</dd>
         <dt>The store sees</dt>
-        <dd>ciphertext and a signed manifest, nothing else</dd>
+        <dd>ciphertext and a signed manifest; no plaintext, no keys</dd>
       </dl>
       <p className="sl-actions">
         {supported ? (

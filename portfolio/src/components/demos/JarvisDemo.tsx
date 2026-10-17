@@ -12,6 +12,8 @@ const LINES: Record<Lang, { label: string; text: string; lang: string }> = {
 }
 const LOCK_LINE = 'Locked in. I’ll keep everything else quiet until you’re done.'
 const HOLD_MS = 1100
+// Flip on once en.mp3, te.mp3, hi.mp3 and lock.mp3 are in public/voice/.
+const HAS_VOICE = false
 
 function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -19,7 +21,21 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
   const inView = useInView(wrap)
   const s = useRef({ t: 0, blink: 0, nextBlink: 2, lookX: 0, lookY: 0, open: 1, talk: 0, ring: 0 })
 
+  useEffect(
+    () => () => {
+      signals.voice = 0
+    },
+    [],
+  )
+
   useFrame((dt) => {
+    // the voice signal feeds the debris even when the mascot is off screen
+    const st = s.current
+    st.t += dt
+    st.talk += ((talking ? 1 : 0) - st.talk) * 0.15
+    const voice = talking ? 0.35 + 0.65 * Math.abs(Math.sin(st.t * 11) * Math.sin(st.t * 4.3)) : 0
+    signals.voice = voice * st.talk
+
     const c = canvas.current
     if (!c || !inView) return
     const g = c.getContext('2d')!
@@ -30,9 +46,9 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
       c.width = Math.round(W * dpr)
       c.height = Math.round(H * dpr)
     }
-    const st = s.current
-    st.t += dt
-    st.ring += dt * (0.25 + state.lock * 1.4)
+    // with reduced motion the ring and the voice line hold still
+    const tt = state.reduced ? 0 : st.t
+    if (!state.reduced) st.ring += dt * (0.25 + state.lock * 1.4)
 
     // look toward the cursor
     const rect = c.getBoundingClientRect()
@@ -53,9 +69,6 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
     const blinkK = 1 - Math.sin(Math.min(1, st.blink) * Math.PI) * 0.92
 
     const lock = state.lock
-    st.talk += ((talking ? 1 : 0) - st.talk) * 0.15
-    const voice = talking ? 0.35 + 0.65 * Math.abs(Math.sin(st.t * 11) * Math.sin(st.t * 4.3)) : 0
-    signals.voice = voice * st.talk
     const wantOpen = hovered ? 1.18 : 1
     st.open += (wantOpen - st.open) * 0.1
 
@@ -91,7 +104,7 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
     const segs = 36
     for (let i = 0; i < segs; i++) {
       const a0 = (i / segs) * Math.PI * 2 + st.ring
-      const on = (i + Math.floor(st.t * (2 + lock * 6))) % 6 !== 0
+      const on = (i + Math.floor(tt * (2 + lock * 6))) % 6 !== 0
       g.strokeStyle = on ? (lock > 0.5 ? hot : 'rgba(236,230,219,0.35)') : 'rgba(236,230,219,0.08)'
       g.lineWidth = 2
       g.beginPath()
@@ -111,9 +124,16 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
       g.shadowColor = hot
       g.shadowBlur = 18 + voice * 20
       g.fillStyle = lock > 0.5 ? hot : '#f3ece1'
-      const rr = Math.min(w, h) / 2
+      // a capsule, drawn with arcTo since roundRect is missing in older browsers
+      const rh = Math.max(h, 2)
+      const rr = Math.min(w, rh) / 2
       g.beginPath()
-      g.roundRect(-w / 2, -h / 2, w, Math.max(h, 2), rr)
+      g.moveTo(-w / 2 + rr, -rh / 2)
+      g.arcTo(w / 2, -rh / 2, w / 2, rh / 2, rr)
+      g.arcTo(w / 2, rh / 2, -w / 2, rh / 2, rr)
+      g.arcTo(-w / 2, rh / 2, -w / 2, -rh / 2, rr)
+      g.arcTo(-w / 2, -rh / 2, w / 2, -rh / 2, rr)
+      g.closePath()
       g.fill()
       g.restore()
     }
@@ -126,7 +146,7 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
     for (let i = 0; i <= 48; i++) {
       const x = cx - mw / 2 + (i / 48) * mw
       const env = Math.sin((i / 48) * Math.PI)
-      const y = cy + R * 0.42 + Math.sin(i * 0.9 + st.t * 18) * env * (2 + 9 * voice * st.talk)
+      const y = cy + R * 0.42 + Math.sin(i * 0.9 + tt * 18) * env * (2 + 9 * voice * st.talk)
       if (i === 0) g.moveTo(x, y)
       else g.lineTo(x, y)
     }
@@ -156,42 +176,52 @@ function Stream() {
   })
   const [, force] = useState(0)
 
+  const tick = () => {
+    const s = sim.current
+    s.now += 60
+    // land arrivals
+    s.flight = s.flight.filter((c) => {
+      if (s.now - c.start >= c.dur) {
+        s.buffered.add(c.seq)
+        return false
+      }
+      return true
+    })
+    // play strictly in order
+    if (s.playing && s.now - s.playStart >= 620) {
+      s.buffered.delete(s.playing)
+      s.playing = 0
+      s.nextPlay++
+    }
+    if (!s.playing && s.buffered.has(s.nextPlay)) {
+      s.playing = s.nextPlay
+      s.playStart = s.now
+    }
+    // request more only while there is room: bounded backpressure
+    while (s.flight.length + s.buffered.size < CAP) {
+      s.flight.push({ seq: s.nextReq++, start: s.now, dur: 300 + Math.random() * 1500 })
+    }
+  }
+
+  // with reduced motion it only moves when asked
   useEffect(() => {
-    if (!inView) return
+    if (!inView || state.reduced) return
     const id = window.setInterval(() => {
-      const s = sim.current
-      s.now += 60
-      // land arrivals
-      s.flight = s.flight.filter((c) => {
-        if (s.now - c.start >= c.dur) {
-          s.buffered.add(c.seq)
-          return false
-        }
-        return true
-      })
-      // play strictly in order
-      if (s.playing && s.now - s.playStart >= 620) {
-        s.buffered.delete(s.playing)
-        s.playing = 0
-        s.nextPlay++
-      }
-      if (!s.playing && s.buffered.has(s.nextPlay)) {
-        s.playing = s.nextPlay
-        s.playStart = s.now
-      }
-      // request more only while there is room: bounded backpressure
-      while (s.flight.length + s.buffered.size < CAP) {
-        s.flight.push({ seq: s.nextReq++, start: s.now, dur: 300 + Math.random() * 1500 })
-      }
+      tick()
       force((n) => n + 1)
     }, 60)
     return () => window.clearInterval(id)
   }, [inView])
 
+  const advance = () => {
+    for (let i = 0; i < 6; i++) tick()
+    force((n) => n + 1)
+  }
+
   const s = sim.current
   const full = s.flight.length + s.buffered.size >= CAP
   return (
-    <div className="jv-stream" ref={ref} aria-label="Simulation of streaming audio playback">
+    <div className="jv-stream" ref={ref} role="group" aria-label="Simulation of streaming audio playback">
       <p className="jv-k">
         <i>Underneath:</i> audio chunks arrive out of order, play in order, and the buffer never holds more than {CAP}.
       </p>
@@ -224,6 +254,14 @@ function Stream() {
         <span className="jv-l">speaker</span>
         <span className="jv-play">{s.playing ? `playing chunk ${s.playing}` : `waiting for chunk ${s.nextPlay}`}</span>
       </div>
+      {state.reduced ? (
+        <p className="jv-k">
+          <button className="act" onClick={advance}>
+            Advance the clock
+          </button>{' '}
+          by 360 ms.
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -236,6 +274,8 @@ export function JarvisDemo() {
   const [locked, setLocked] = useState(false)
   const [hold, setHold] = useState(0)
   const holdRaf = useRef(0)
+  // a hold that just locked in ends in a click; that click must not release it
+  const justHeld = useRef(false)
   const talkTimer = useRef(0)
   const voiceEl = useRef<HTMLAudioElement | null>(null)
 
@@ -244,7 +284,7 @@ export function JarvisDemo() {
     setTalking(true)
     window.clearTimeout(talkTimer.current)
     voiceEl.current?.pause()
-    if (audio.enabled) {
+    if (HAS_VOICE && audio.enabled) {
       const a = new Audio(`/voice/${file}.mp3`)
       a.volume = 0.9
       voiceEl.current = a
@@ -284,6 +324,7 @@ export function JarvisDemo() {
       setHold(p)
       if (p >= 1) {
         setHold(0)
+        justHeld.current = true
         lockIn()
         return
       }
@@ -305,6 +346,17 @@ export function JarvisDemo() {
     [],
   )
 
+  // One button for both, so keyboard focus survives the switch. Keyboard,
+  // screen reader and voice-control clicks report detail 0 and lock in at once.
+  const click = (e: React.MouseEvent) => {
+    if (justHeld.current) {
+      justHeld.current = false
+      return
+    }
+    if (locked) release()
+    else if (e.detail === 0) lockIn()
+  }
+
   return (
     <div className="jv">
       <div className="jv-stage" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
@@ -312,10 +364,10 @@ export function JarvisDemo() {
         <p className="jv-bubble" lang={locked ? 'en' : LINES[lang].lang} aria-live="polite">
           “{line}”
         </p>
-        <p className="jv-state">{locked ? 'locked in' : talking ? 'speaking' : hovered ? 'listening' : 'idle'}</p>
+        <p className="jv-state">{locked ? 'locked in' : talking ? 'greeting' : hovered ? 'listening' : 'idle'}</p>
       </div>
       <p className="jv-controls">
-        Have it speak{' '}
+        Greet me in{' '}
         {(Object.keys(LINES) as Lang[]).map((l, i, all) => (
           <span key={l}>
             <button className="act" aria-pressed={lang === l} onClick={() => pick(l)} lang={LINES[l].lang}>
@@ -325,28 +377,20 @@ export function JarvisDemo() {
           </span>
         ))}
         . Or{' '}
-        {locked ? (
-          <button className="act" onClick={release} data-cursor="let go">
-            release the lock
-          </button>
-        ) : (
-          <button
-            className="act jv-hold"
-            style={{ ['--p' as string]: hold }}
-            onPointerDown={startHold}
-            onPointerUp={endHold}
-            onPointerLeave={endHold}
-            onKeyDown={(e) => {
-              if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
-                e.preventDefault()
-                lockIn()
-              }
-            }}
-            data-cursor="keep holding"
-          >
-            press and hold to lock in
-          </button>
-        )}
+        <button
+          className="act jv-hold"
+          style={{ ['--p' as string]: hold }}
+          onPointerDown={() => {
+            justHeld.current = false
+            startHold()
+          }}
+          onPointerUp={endHold}
+          onPointerLeave={endHold}
+          onClick={click}
+          data-cursor={locked ? 'let go' : 'keep holding'}
+        >
+          {locked ? 'release the lock' : 'press and hold to lock in'}
+        </button>
         .
       </p>
       <Stream />

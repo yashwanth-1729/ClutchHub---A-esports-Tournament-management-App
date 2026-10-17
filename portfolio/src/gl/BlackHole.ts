@@ -24,13 +24,14 @@ export type FrameUniforms = {
   lock: number
   intro: number
   flash: number
+  sky: number
 }
 
 type Uniforms = Record<string, WebGLUniformLocation | null>
 
 const NAMES = [
   'uRes', 'uTime', 'uCamPos', 'uCamFwd', 'uCamRight', 'uCamUp', 'uTanFov', 'uShift', 'uMouse',
-  'uName', 'uPlane', 'uHeat', 'uLock', 'uDim', 'uIntro', 'uFlash', 'uSteps',
+  'uName', 'uPlane', 'uHeat', 'uLock', 'uDim', 'uIntro', 'uFlash', 'uSteps', 'uSky', 'uPlaneY',
 ]
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string) {
@@ -48,11 +49,15 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string) {
 export class BlackHole {
   readonly canvas: HTMLCanvasElement
   private gl: WebGL2RenderingContext
-  private prog: WebGLProgram
+  private prog!: WebGLProgram
+  private buf!: WebGLBuffer
   private u: Uniforms = {}
-  private nameTex: WebGLTexture
-  private plane = { halfW: 1, halfH: 1, z: 15 }
+  private nameTex!: WebGLTexture
+  private plane = { halfW: 1, halfH: 1, z: 15, y: 0 }
+  private lastName: [HTMLCanvasElement, number, number, number, number] | null = null
   private scale = 1
+  /** True between a lost GPU context and its restoration. */
+  lost = false
   steps = 170
 
   constructor(canvas: HTMLCanvasElement) {
@@ -67,7 +72,27 @@ export class BlackHole {
     })
     if (!gl) throw new Error('webgl2 unavailable')
     this.gl = gl
+    this.init()
 
+    // A driver reset or a backgrounded phone can take the context away. Ask for
+    // it back, then rebuild everything that lived on the GPU.
+    canvas.addEventListener('webglcontextlost', this.onLost)
+    canvas.addEventListener('webglcontextrestored', this.onRestored)
+  }
+
+  private onLost = (e: Event) => {
+    e.preventDefault()
+    this.lost = true
+  }
+
+  private onRestored = () => {
+    this.init()
+    if (this.lastName) this.setName(...this.lastName)
+    this.lost = false
+  }
+
+  private init() {
+    const gl = this.gl
     const prog = gl.createProgram()!
     gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, vertSrc))
     gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, fragSrc))
@@ -79,8 +104,8 @@ export class BlackHole {
     for (const n of NAMES) this.u[n] = gl.getUniformLocation(prog, n)
 
     // one triangle that covers the screen
-    const buf = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+    this.buf = gl.createBuffer()!
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
     gl.enableVertexAttribArray(0)
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
@@ -95,14 +120,20 @@ export class BlackHole {
   static supported() {
     try {
       const c = document.createElement('canvas')
-      return !!c.getContext('webgl2')
+      const gl = c.getContext('webgl2')
+      // hand the probe context straight back; browsers cap how many can be live
+      gl?.getExtension('WEBGL_lose_context')?.loseContext()
+      return !!gl
     } catch {
       return false
     }
   }
 
   /** The name is drawn on a plane behind the hole, so the lensing bends it. */
-  setName(source: HTMLCanvasElement, halfW: number, halfH: number, z: number) {
+  setName(source: HTMLCanvasElement, halfW: number, halfH: number, z: number, y = 0) {
+    this.lastName = [source, halfW, halfH, z, y]
+    this.plane = { halfW, halfH, z, y }
+    if (this.lost) return
     const gl = this.gl
     gl.bindTexture(gl.TEXTURE_2D, this.nameTex)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -113,14 +144,14 @@ export class BlackHole {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    this.plane = { halfW, halfH, z }
   }
 
   /** Render scale relative to CSS pixels. The image is soft by nature, so this can drop a lot. */
   resize(scale: number) {
     this.scale = scale
-    const w = Math.max(2, Math.round(window.innerWidth * scale))
-    const h = Math.max(2, Math.round(window.innerHeight * scale))
+    // measured from the canvas box itself, which can be taller than innerHeight on phones
+    const w = Math.max(2, Math.round((this.canvas.clientWidth || window.innerWidth) * scale))
+    const h = Math.max(2, Math.round((this.canvas.clientHeight || window.innerHeight) * scale))
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w
       this.canvas.height = h
@@ -133,6 +164,7 @@ export class BlackHole {
 
   render(f: CameraFrame, k: FrameUniforms) {
     const gl = this.gl
+    if (this.lost || gl.isContextLost()) return
     const { u } = this
     const w = this.canvas.width
     const h = this.canvas.height
@@ -167,17 +199,23 @@ export class BlackHole {
     gl.uniform2f(u.uShift, f.sx, f.sy)
     gl.uniform3f(u.uMouse, k.mouse[0], k.mouse[1], k.mouse[2])
     gl.uniform4f(u.uPlane, this.plane.z, this.plane.halfW, this.plane.halfH, f.name)
+    gl.uniform1f(u.uPlaneY, this.plane.y)
     gl.uniform1f(u.uHeat, f.heat)
     gl.uniform1f(u.uLock, k.lock)
     gl.uniform1f(u.uDim, f.dim)
     gl.uniform1f(u.uIntro, k.intro)
     gl.uniform1f(u.uFlash, k.flash)
     gl.uniform1i(u.uSteps, this.steps)
+    gl.uniform1f(u.uSky, k.sky)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
   }
 
   dispose() {
+    this.canvas.removeEventListener('webglcontextlost', this.onLost)
+    this.canvas.removeEventListener('webglcontextrestored', this.onRestored)
+    if (this.gl.isContextLost()) return
     this.gl.deleteProgram(this.prog)
+    this.gl.deleteBuffer(this.buf)
     this.gl.deleteTexture(this.nameTex)
   }
 }

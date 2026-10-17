@@ -1,6 +1,6 @@
 // Everything you hear is synthesized live. No audio files.
-// The drone is redshifted with you: its pitch and brightness fall with the
-// same time-dilation factor the HUD shows.
+// The drone is redshifted with you: its pitch and brightness fall as the
+// time-dilation factor the HUD shows rises.
 
 const SCALE = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23] // D minor pentatonic-ish
 
@@ -42,6 +42,11 @@ export class VoidAudio {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     const ctx = new AC()
     this.ctx = ctx
+    // nothing plays in a hidden tab; it picks up again on return if sound is on
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) void ctx.suspend()
+      else if (this.enabled) void ctx.resume()
+    })
 
     this.master = ctx.createGain()
     this.master.gain.value = 0
@@ -117,6 +122,13 @@ export class VoidAudio {
     this.master.gain.setValueAtTime(this.master.gain.value, t)
     this.master.gain.linearRampToValueAtTime(on ? 0.9 : 0, t + (on ? 2.5 : 0.6))
     this.enabled = on
+    if (!on) {
+      // once the fade is done, stop the graph rather than synthesizing silence
+      const ctx = this.ctx
+      window.setTimeout(() => {
+        if (!this.enabled && ctx.state === 'running') void ctx.suspend()
+      }, 700)
+    }
     this.listeners.forEach((fn) => fn(on))
   }
 

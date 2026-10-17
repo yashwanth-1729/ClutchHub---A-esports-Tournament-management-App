@@ -8,8 +8,8 @@ import { SldtLab } from './SldtLab'
 
 const FOUND = [
   ['A fine-grained token can’t make a repository’s first commit.', 'A documented GitHub limit rather than a bug. A new store is seeded with one file by hand, once.'],
-  ['Losing the race during the very first publish crashed the cycle.', 'It now retries like every other lost compare-and-swap, with a regression test that fakes the stale read that caused it.'],
-  ['Retries without a delay burned out in milliseconds.', 'Exponential backoff from 250 ms to 8 s, and a budget raised from five attempts to eight for a dataset’s first sync.'],
+  ['Losing the race during the very first publish crashed the cycle.', 'It now restarts the cycle like any other lost race on the manifest, with a regression test that fakes the stale read that caused it.'],
+  ['Retries without a delay burned out in milliseconds.', 'Exponential backoff from 300 ms to 8 s, and a budget raised from five attempts to eight for a dataset’s first sync.'],
   ['A stale read looks exactly like “nothing new”.', 'Nothing in the response gives it away, so no protocol can detect it. Periodic pulls catch up; the live test now polls the way a real deployment does.'],
 ]
 

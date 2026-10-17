@@ -6,6 +6,7 @@ import { sleep } from '../../lib/hooks'
 type Who = 'you' | 'p2' | 'taken'
 type Slot = { t: string; by: Who | null; contested?: boolean }
 type Line = { text: string; cls?: 'ok' | 'bad' | 'dim' }
+type LogLine = Line & { id: number }
 
 const TIMES = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30']
 const initial = (): Slot[] => TIMES.map((t) => ({ t, by: t === '09:30' || t === '11:00' || t === '12:00' ? 'taken' : null }))
@@ -17,25 +18,28 @@ export function HospitalDemo() {
     slotsRef.current = typeof next === 'function' ? next(slotsRef.current) : next
     setSlotsState(slotsRef.current)
   }
-  const [log, setLog] = useState<Line[]>([
-    { text: 'waiting for a booking', cls: 'dim' },
-  ])
+  const [log, setLog] = useState<LogLine[]>([{ id: 0, text: 'waiting for a booking', cls: 'dim' }])
+  const lineId = useRef(1)
+  // bumped by "start another", so a booking still in flight can't land in the new morning
+  const gen = useRef(0)
   const [busy, setBusy] = useState(false)
   const [leads, setLeads] = useState(0)
   const booking = useRef(1040)
   const leadId = useRef(41)
 
-  const push = (...lines: Line[]) => setLog((l) => [...l, ...lines].slice(-7))
+  const push = (...lines: Line[]) => setLog((l) => [...l, ...lines.map((x) => ({ ...x, id: lineId.current++ }))].slice(-7))
 
   const book = async (i: number) => {
     if (busy || slotsRef.current[i].by) return
     setBusy(true)
+    const g = gen.current
     const t = slotsRef.current[i].t
     setSlots((s) => s.map((x, k) => (k === i ? { ...x, contested: true } : x)))
     push({ text: `you → POST /bookings  slot=${t}` }, { text: `p2  → POST /bookings  slot=${t}` })
     signals.contention = 1
     audio.blip(1)
     await sleep(700)
+    if (g !== gen.current) return setBusy(false)
 
     const winner: Who = Math.random() < 0.6 ? 'you' : 'p2'
     const loser: Who = winner === 'you' ? 'p2' : 'you'
@@ -44,17 +48,10 @@ export function HospitalDemo() {
     push({ text: `← 201 ${winner === 'you' ? 'you' : 'p2 '} booked ${t}, BK-${id}`, cls: 'ok' }, { text: `← 409 ${loser === 'you' ? 'you' : 'p2 '} slot ${t} is already held`, cls: 'bad' })
     audio.blip(4)
     await sleep(650)
+    if (g !== gen.current) return setBusy(false)
 
-    // the loser is offered the next free slot instead of a silent double booking
-    const next = slotsRef.current.findIndex((x) => !x.by)
-    if (next >= 0) {
-      const t2 = TIMES[next]
-      const id2 = booking.current++
-      setSlots((s) => s.map((x, k) => (k === next ? { t: x.t, by: loser } : x)))
-      push({ text: `${loser === 'you' ? 'you' : 'p2 '} → retry with next free slot ${t2}` }, { text: `← 201 booked ${t2}, BK-${id2}`, cls: 'ok' })
-    } else {
-      push({ text: `${loser === 'you' ? 'you' : 'p2 '} → no free slots left today`, cls: 'dim' })
-    }
+    // refused outright, never a silent double booking
+    push({ text: `${loser === 'you' ? 'you' : 'p2 '} → pick another slot`, cls: 'dim' })
     setBusy(false)
   }
 
@@ -84,7 +81,7 @@ export function HospitalDemo() {
             key={s.t}
             className={`hs-slot ${s.by ?? 'free'} ${s.contested ? 'contested' : ''}`}
             onClick={() => book(i)}
-            disabled={!!s.by || busy}
+            aria-disabled={!!s.by || busy}
             data-cursor={s.by ? undefined : `book ${s.t}`}
           >
             <span className="hs-t">{s.t}</span>
@@ -94,17 +91,18 @@ export function HospitalDemo() {
       </div>
       <p className="hs-actions">
         Click any free time. Or{' '}
-        <button className="act" onClick={doubleSubmit} disabled={busy}>
+        <button className="act" onClick={doubleSubmit} aria-disabled={busy}>
           submit the intake form twice
         </button>{' '}
         and count the leads.
-        {full ? (
+        {full && !busy ? (
           <>
             {' '}
             The morning is full;{' '}
             <button
               className="act"
               onClick={() => {
+                gen.current++
                 setSlots(initial())
                 push({ text: 'a new morning', cls: 'dim' })
               }}
@@ -115,9 +113,9 @@ export function HospitalDemo() {
           </>
         ) : null}
       </p>
-      <pre className="demo-log" aria-live="polite">
-        {log.map((l, i) => (
-          <span key={i} className={l.cls}>
+      <pre className="demo-log" role="log" aria-live="polite" aria-relevant="additions">
+        {log.map((l) => (
+          <span key={l.id} className={l.cls}>
             {l.text}
             {'\n'}
           </span>

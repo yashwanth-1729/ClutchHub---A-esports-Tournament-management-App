@@ -3,6 +3,7 @@ import { audio } from '../../audio/VoidAudio'
 import { signals } from '../../engine/signals'
 import {
   ARGON,
+  ConcurrentWriteConflict,
   Device,
   DumbStore,
   ReplayDetected,
@@ -22,8 +23,10 @@ import {
 const OID = 'note_0193'
 const SEED = 'DSA revision: graphs. BFS first, Dijkstra once the edges get weights.'
 const rid = () => hex(crypto.getRandomValues(new Uint8Array(2)))
+const td = new TextDecoder()
 
 type Snapshot = Map<string, { bytes: Uint8Array; version: number }>
+type Line = LogLine & { id: number }
 
 export function SldtLab() {
   const lab = useRef<{
@@ -39,14 +42,18 @@ export function SldtLab() {
   const rerender = () => setTick((t) => t + 1)
   const [phase, setPhase] = useState<'idle' | 'deriving' | 'ready'>('idle')
   const [busy, setBusy] = useState(false)
-  const [log, setLog] = useState<LogLine[]>([])
+  const [log, setLog] = useState<Line[]>([])
   const [attacked, setAttacked] = useState<string | null>(null)
+  const lineId = useRef(0)
+  const raceBtn = useRef<HTMLButtonElement>(null)
 
   const L = lab.current
   const push = (line: LogLine) => {
-    setLog((l) => [...l, line].slice(-11))
+    const id = lineId.current++
+    setLog((l) => [...l, { ...line, id }].slice(-11))
     if (line.cls === 'bad') audio.blip(0)
   }
+  const focusRace = () => requestAnimationFrame(() => raceBtn.current?.focus({ preventScroll: true }))
 
   const runSync = async (d: Device, pause = 0) => {
     if (!L.keys || d.halted) return
@@ -61,6 +68,8 @@ export function SldtLab() {
         push({ text: `${d.name}  hard stop. ${e.name}: ${e.message}. Local data untouched`, cls: 'bad' })
         signals.tampered = true
         audio.thump()
+      } else if (e instanceof ConcurrentWriteConflict) {
+        push({ text: `${d.name}  409: ${e.message.split('/').pop()} changed since we read it. This sync stops; the next one pulls that write and settles the conflict`, cls: 'warn' })
       } else push({ text: `${d.name}  ${(e as Error).message}`, cls: 'bad' })
     } finally {
       d.busy = false
@@ -69,19 +78,28 @@ export function SldtLab() {
   }
 
   const create = async () => {
+    if (phase !== 'idle') return
     setPhase('deriving')
     const id = newIdentity()
-    L.id = id
-    L.prefix = `sldt/${id.datasetId.slice(0, 10)}`
     push({ text: `new dataset; the recovery code ${recoveryCode(id).slice(0, 22)}… is the whole account`, cls: 'dim' })
     await sleep(30)
-    const keys = await deriveKeys(id)
+    let keys: Keys
+    try {
+      keys = await deriveKeys(id)
+    } catch (e) {
+      setPhase('idle')
+      push({ text: `key derivation failed (${(e as Error).message}); try again`, cls: 'bad' })
+      return
+    }
+    L.id = id
+    L.prefix = `sldt/${id.datasetId.slice(0, 10)}`
     L.keys = keys
     push({ text: `Argon2id, ${keys.memoryKiB / 1024} MiB, ${ARGON.iterations} passes: 64 bytes in ${Math.round(keys.ms)} ms, split into an AES key and an HMAC key`, cls: 'ok' })
     setPhase('ready')
     L.a.edit(OID, SEED)
     await runSync(L.a)
     await runSync(L.b)
+    focusRace()
   }
 
   const scenario = async (fn: () => Promise<void>) => {
@@ -103,23 +121,30 @@ export function SldtLab() {
 
   const race = () =>
     scenario(async () => {
-      const base = L.a.get(OID)?.payload.body ?? SEED
-      L.a.edit(OID, `${base.split(' (')[0]} (edited on the laptop)`)
-      L.b.edit(OID, `${base.split(' (')[0]} (edited on the phone)`)
+      const base = (L.a.get(OID)?.payload.body ?? SEED).split(' (')[0]
+      L.a.edit(OID, `${base} (edited on the laptop)`)
+      L.b.edit(OID, `${base} (edited on the phone)`)
       rerender()
       push({ text: 'both devices edit the same note offline, then sync at the same moment', cls: 'dim' })
       await Promise.all([runSync(L.a, 320), runSync(L.b, 360)])
-      await runSync(L.a)
+      // the loser's next sync pulls the winner's write; then the other side catches up
       await runSync(L.b)
+      await runSync(L.a)
       const same = L.a.get(OID)?.payload.body === L.b.get(OID)?.payload.body
-      push({ text: same ? `converged: both hold the ${L.a.get(OID)?.deviceId === L.a.id ? 'laptop' : 'phone'}’s version, chosen by rule, not by timing` : 'not converged yet; sync again', cls: same ? 'ok' : 'warn' })
+      push({
+        text: same
+          ? `converged: both hold the ${L.a.get(OID)?.deviceId === L.a.id ? 'laptop' : 'phone'}’s version, chosen by the rule, not by who was faster`
+          : 'not converged yet; sync again',
+        cls: same ? 'ok' : 'warn',
+      })
     })
 
   const flip = () =>
     scenario(async () => {
-      const base = L.a.get(OID)?.payload.body ?? SEED
-      L.a.edit(OID, `${base.split(' (')[0]} (a fresh edit)`)
+      const base = (L.a.get(OID)?.payload.body ?? SEED).split(' (')[0]
+      L.a.edit(OID, `${base} (a fresh edit)`)
       await runSync(L.a)
+      if (L.a.halted) return
       snapshot()
       const at = L.store.flipBit(`${L.prefix}/objects/${OID}.enc`)
       setAttacked('bit')
@@ -141,16 +166,22 @@ export function SldtLab() {
 
   const rollback = () =>
     scenario(async () => {
+      // make sure the laptop has seen the newest manifest, so an older one is a step backwards for it
       if (L.store.manifests.length < 2) {
-        L.a.edit(OID, `${L.a.get(OID)?.payload.body.split(' (')[0] ?? SEED} (one more edit)`)
-        await runSync(L.a)
+        const base = (L.a.get(OID)?.payload.body ?? SEED).split(' (')[0]
+        L.a.edit(OID, `${base} (one more edit)`)
       }
+      await runSync(L.a)
+      if (L.a.halted) return
+      const older = L.store.manifests
+        .map((bytes) => ({ bytes, rev: (JSON.parse(td.decode(bytes)) as { data: { revision: number } }).data.revision }))
+        .filter((m) => m.rev < L.a.lastRev)
+        .sort((x, y) => y.rev - x.rev)[0]
+      if (!older) return
       snapshot()
-      const old = L.store.manifests[L.store.manifests.length - 2]
-      L.store.replace(`${L.prefix}/manifest.json`, old)
+      L.store.replace(`${L.prefix}/manifest.json`, older.bytes)
       setAttacked('rollback')
-      const r = (JSON.parse(new TextDecoder().decode(old)) as { data: { revision: number } }).data.revision
-      push({ text: `store  quietly serves an older, validly signed manifest (r${r})`, cls: 'bad' })
+      push({ text: `store  quietly serves an older, validly signed manifest (r${older.rev})`, cls: 'bad' })
       await runSync(L.a)
     })
 
@@ -165,6 +196,7 @@ export function SldtLab() {
       push({ text: 'store restored. A stopped device waits for a human; here, that’s you', cls: 'dim' })
       await runSync(L.a)
       await runSync(L.b)
+      focusRace()
     })
 
   const manifest = readManifest(L.store, L.prefix)
@@ -172,7 +204,7 @@ export function SldtLab() {
   let ctPreview = ''
   if (objFile) {
     try {
-      const env = JSON.parse(new TextDecoder().decode(objFile.bytes)) as { ct: string }
+      const env = JSON.parse(td.decode(objFile.bytes)) as { ct: string }
       ctPreview = hex(Uint8Array.from(atob(env.ct), (c) => c.charCodeAt(0)).slice(0, 72)).replace(/(..)/g, '$1 ')
     } catch {
       ctPreview = '(unparseable bytes)'
@@ -181,6 +213,10 @@ export function SldtLab() {
 
   const ready = phase === 'ready'
   const idle = ready && !busy && !attacked
+  // controls stay mounted while unavailable, so keyboard focus never falls back to the page
+  const guard = (ok: boolean, fn: () => void) => () => {
+    if (ok) fn()
+  }
 
   return (
     <div className="lab">
@@ -197,27 +233,30 @@ export function SldtLab() {
           <i>Deriving keys: Argon2id, 64 MiB, three passes…</i>
         ) : (
           <>
-            Recovery code <code className="lab-code">{L.id ? `${recoveryCode(L.id).slice(0, 30)}…` : ''}</code>, keys derived in {Math.round(L.keys?.ms ?? 0)} ms. Both
-            devices hold it; the store never will.
+            Recovery code <code className="lab-code">{L.id ? `${recoveryCode(L.id).slice(0, 30)}…` : ''}</code>, keys derived in {Math.round(L.keys?.ms ?? 0)} ms
+            {L.keys && L.keys.memoryKiB < ARGON.memoryKiB ? ` (with ${L.keys.memoryKiB / 1024} MiB; this device refused 64)` : ''}. Both devices hold it; the store never
+            will.
           </>
         )}
       </p>
 
-      <div className={`lab-grid ${ready ? '' : 'locked'}`}>
+      <div className={`lab-grid ${ready ? '' : 'locked'}`} inert={!ready}>
         {[L.a, L.b].map((d, i) => {
           const rec = d.get(OID)
+          const canSync = ready && !busy && !attacked && !d.busy && !d.halted
           return (
             <div key={d.id} className={`lab-dev ${d.halted ? 'halted' : ''}`} style={{ order: i === 0 ? 0 : 2 }}>
               <p className="lab-col-head">
                 <i>The {d.name.trim()}</i> <span className="mono">device {d.id}</span>
               </p>
               <textarea
+                id={`lab-note-${i}`}
                 value={rec?.payload.body ?? ''}
                 onChange={(e) => {
                   d.edit(OID, e.target.value)
                   rerender()
                 }}
-                disabled={!!d.halted || !ready || busy}
+                readOnly={!!d.halted || !ready || busy || !!attacked}
                 rows={3}
                 aria-label={`Note on the ${d.name.trim()}`}
               />
@@ -230,12 +269,10 @@ export function SldtLab() {
                   <span className="bad">Stopped. {d.halted}. Local data untouched.</span>
                 ) : (
                   <>
-                    {d.busy ? 'Syncing…' : rec?.pending ? 'Edited, not yet synced. ' : `In step with manifest r${d.lastRev}. `}
-                    {!d.busy ? (
-                      <button className="act" onClick={() => runSync(d)} disabled={!ready || busy}>
-                        sync
-                      </button>
-                    ) : null}
+                    {d.busy ? 'Syncing… ' : rec?.pending ? 'Edited, not yet synced. ' : `In step with manifest r${d.lastRev}. `}
+                    <button className="act" aria-disabled={!canSync} onClick={guard(canSync, () => runSync(d))}>
+                      sync
+                    </button>
                   </>
                 )}
               </p>
@@ -286,19 +323,19 @@ export function SldtLab() {
         {ready ? (
           <>
             Now{' '}
-            <button className="act" onClick={race} disabled={!idle}>
+            <button className="act" ref={raceBtn} aria-disabled={!idle} onClick={guard(idle, race)}>
               edit both and sync at once
             </button>
             . Then attack the store:{' '}
-            <button className="act" onClick={flip} disabled={!idle}>
+            <button className="act" aria-disabled={!idle} onClick={guard(idle, flip)}>
               flip a bit
             </button>
             ,{' '}
-            <button className="act" onClick={forge} disabled={!idle}>
+            <button className="act" aria-disabled={!idle} onClick={guard(idle, forge)}>
               forge the manifest
             </button>
             , or{' '}
-            <button className="act" onClick={rollback} disabled={!idle}>
+            <button className="act" aria-disabled={!idle} onClick={guard(idle, rollback)}>
               serve an old one
             </button>
             .
@@ -306,7 +343,7 @@ export function SldtLab() {
               <>
                 {' '}
                 When you’ve seen enough,{' '}
-                <button className="act" onClick={heal} disabled={busy}>
+                <button className="act" aria-disabled={busy} onClick={guard(!busy, heal)}>
                   restore the store
                 </button>
                 .
@@ -318,10 +355,10 @@ export function SldtLab() {
         )}
       </p>
 
-      <pre className="demo-log lab-log" aria-live="polite">
+      <pre className="demo-log lab-log" role="log" aria-live="polite" aria-relevant="additions">
         {log.length ? null : <span className="dim">Every line here comes from the engine as it runs.{'\n'}</span>}
-        {log.map((l, i) => (
-          <span key={i} className={l.cls}>
+        {log.map((l) => (
+          <span key={l.id} className={l.cls}>
             {l.text}
             {'\n'}
           </span>

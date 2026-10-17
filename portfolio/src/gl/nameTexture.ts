@@ -1,19 +1,40 @@
 // Renders the name into a canvas that the shader places behind the black hole.
 // Landscape screens get one line; portrait screens get two so it stays large.
+import nameFontUrl from '@fontsource-variable/hubot-sans/files/hubot-sans-latin-wdth-normal.woff2?url'
 
 export type NamePlate = {
   canvas: HTMLCanvasElement
   halfW: number
   halfH: number
   z: number
+  y: number
 }
 
-export const NAME_FONT = '"Newsreader Variable", "Newsreader", Georgia, serif'
+// Canvas text can't ask a variable font for a width, so the name gets its own
+// face pinned to Hubot Sans at its widest and heaviest: the descriptors clamp
+// whatever the canvas requests to exactly this instance.
+const FAMILY = 'Voidbyte Name'
+export const NAME_FONT = `"${FAMILY}", "Hubot Sans Variable", sans-serif`
+
+let loading: Promise<unknown> | null = null
+export function loadNameFont() {
+  if (!loading) {
+    const face = new FontFace(FAMILY, `url(${nameFontUrl})`, { weight: '780', stretch: '125%' })
+    document.fonts.add(face)
+    loading = face.load()
+  }
+  return loading
+}
+
+/** On a phone both lines sit above the hole, so the lensing bends them without shredding them. */
+export const PORTRAIT = { halfW: 10.5, y: 11.5 }
 
 export function drawNamePlate(text: string, portrait: boolean): NamePlate {
-  const lines = portrait ? [text.slice(0, Math.floor(text.length / 2)), text.slice(Math.floor(text.length / 2))] : [text]
+  const name = text.toUpperCase()
+  const cut = Math.floor(name.length / 2)
+  const lines = portrait ? [name.slice(0, cut), name.slice(cut)] : [name]
   const W = portrait ? 1400 : 2400
-  const lineH = portrait ? 520 : 460
+  const lineH = portrait ? 480 : 420
   const H = lineH * lines.length + (portrait ? 80 : 60)
 
   const c = document.createElement('canvas')
@@ -24,23 +45,25 @@ export function drawNamePlate(text: string, portrait: boolean): NamePlate {
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#fff'
   ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
+  ctx.textBaseline = 'alphabetic'
 
-  let size = lineH * 0.9
+  let size = lineH
   const setFont = () => {
-    ctx.font = `italic 400 ${size}px ${NAME_FONT}`
+    ctx.font = `780 ${size}px ${NAME_FONT}`
   }
   setFont()
   const widest = Math.max(...lines.map((l) => ctx.measureText(l).width))
   size *= Math.min(1, (W * 0.94) / widest)
   setFont()
 
+  // centre on the capitals themselves, not the em box
+  const cap = ctx.measureText('H').actualBoundingBoxAscent
   lines.forEach((line, i) => {
-    const y = H / 2 + (i - (lines.length - 1) / 2) * lineH * 0.98
-    ctx.fillText(line, W / 2, y)
+    const mid = H / 2 + (i - (lines.length - 1) / 2) * lineH
+    ctx.fillText(line, W / 2, mid + cap / 2)
   })
 
   // world units: wide enough that the hole only swallows a letter or two
-  const halfW = portrait ? 19 : 31
-  return { canvas: c, halfW, halfH: halfW * (H / W), z: 15 }
+  const halfW = portrait ? PORTRAIT.halfW : 31
+  return { canvas: c, halfW, halfH: halfW * (H / W), z: 15, y: portrait ? PORTRAIT.y : 0 }
 }

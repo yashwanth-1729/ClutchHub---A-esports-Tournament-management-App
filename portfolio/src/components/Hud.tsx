@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { audio } from '../audio/VoidAudio'
-import { onAnchors, scrollToTarget, state } from '../engine/engine'
+import { focusTarget, onAnchors, scrollToTarget, state } from '../engine/engine'
 import { useFrame } from '../lib/hooks'
 import { brand } from '../content'
 
@@ -59,6 +59,7 @@ export function Hud() {
   const go = (target: string | number) => (e: React.MouseEvent) => {
     e.preventDefault()
     scrollToTarget(target)
+    focusTarget(target)
   }
   const [num, title] = CHAPTERS[current] ?? ['', '']
 

@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { bookIndex, refTarget } from '../content'
-import { scrollToTarget, state } from '../engine/engine'
+import { focusTarget, scrollToTarget, state } from '../engine/engine'
 import { useFrame, useInView } from '../lib/hooks'
 
 const ITEMS = bookIndex.map(([t]) => t)
@@ -9,8 +9,8 @@ const ITEMS = bookIndex.map(([t]) => t)
 function shadowRadiusPx() {
   const r = Math.max(state.frame.r, 1.01)
   const sinA = Math.min(0.999, ((3 * Math.sqrt(3)) / 2) * Math.sqrt(1 - 1 / r) / r)
-  const fov = window.innerWidth / window.innerHeight < 0.9 ? state.frame.fov * 1.25 : state.frame.fov
-  return (Math.tan(Math.asin(sinA)) / Math.tan(fov / 2)) * (window.innerHeight / 2)
+  const fov = state.viewW / state.viewH < 0.9 ? state.frame.fov * 1.25 : state.frame.fov
+  return (Math.tan(Math.asin(sinA)) / Math.tan(fov / 2)) * (state.viewH / 2)
 }
 
 export function Orbit() {
@@ -79,7 +79,9 @@ export function Orbit() {
                       href={refTarget[r]}
                       onClick={(e) => {
                         e.preventDefault()
-                        scrollToTarget(refTarget[r] === '#top' ? 0 : refTarget[r])
+                        const to = refTarget[r] === '#top' ? 0 : refTarget[r]
+                        scrollToTarget(to)
+                        focusTarget(to)
                       }}
                     >
                       {r}

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { audio } from '../audio/VoidAudio'
-import { scrollToTarget, state } from '../engine/engine'
+import { focusTarget, scrollToTarget, state } from '../engine/engine'
 import { useFrame } from '../lib/hooks'
 import { brand, links } from '../content'
 
@@ -16,6 +16,9 @@ export function Contact() {
   const [status, setStatus] = useState('Your mail app opens with the message already written, so it really does reach me.')
   const [sent, setSent] = useState(false)
   const [copied, setCopied] = useState(false)
+  // kept after sending, in case no mail app answered the mailto: link
+  const [lastMsg, setLastMsg] = useState('')
+  const [msgCopied, setMsgCopied] = useState(false)
   const input = useRef<HTMLInputElement>(null)
   const note = useRef<HTMLParagraphElement>(null)
   const acc = useRef(0)
@@ -35,6 +38,18 @@ export function Contact() {
     const msg = text.trim()
     if (!msg || sent) return
     setSent(true)
+    setLastMsg(msg)
+    setMsgCopied(false)
+    const done = 'Gone past the horizon. Your mail app should be open with it now; press send there and it reaches me.'
+
+    if (state.reduced) {
+      setText('')
+      setStatus(done)
+      window.location.href = mailto(msg)
+      setSent(false)
+      return
+    }
+
     const field = input.current!
     const box = field.getBoundingClientRect()
     const cs = getComputedStyle(field)
@@ -56,8 +71,9 @@ export function Contact() {
     document.body.appendChild(layer)
     setText('')
 
-    const cx = window.innerWidth / 2
-    const cy = window.innerHeight / 2
+    // the hole sits at the centre of the canvas box
+    const cx = state.viewW / 2
+    const cy = state.viewH / 2
     const spans = Array.from(layer.children) as HTMLElement[]
     const tl = gsap.timeline({
       onComplete: () => {
@@ -91,11 +107,26 @@ export function Contact() {
       .to(state, { plunge: 1, duration: 2.2, ease: 'power3.in' }, 0.2)
       .to(state, { flash: 1, duration: 0.15 }, 2.25)
       .add(() => {
-        setStatus('Gone past the horizon. Your mail app should be open with it now; press send there and it reaches me.')
+        setStatus(done)
         window.location.href = mailto(msg)
       }, 2.4)
       .to(state, { plunge: 0, duration: 3.2, ease: 'power2.out' }, 3.0)
-      .add(() => setSent(false), 3.4)
+      .add(() => {
+        setSent(false)
+        input.current?.focus({ preventScroll: true })
+      }, 3.4)
+  }
+
+  const gmail = (body: string) =>
+    `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(links.email)}&su=${encodeURIComponent('From the void')}&body=${encodeURIComponent(body)}`
+
+  const copyMsg = async () => {
+    try {
+      await navigator.clipboard.writeText(`${lastMsg}\n\n— to ${links.email}`)
+      setMsgCopied(true)
+    } catch {
+      setMsgCopied(false)
+    }
   }
 
   const copy = async () => {
@@ -131,12 +162,26 @@ export function Contact() {
           maxLength={600}
           autoComplete="off"
         />
-        <button type="submit" className="act" disabled={!text.trim() || sent} data-cursor="into the hole">
+        <button type="submit" className="act" aria-disabled={!text.trim() || sent} data-cursor="into the hole">
           send it in
         </button>
       </form>
       <p className="void-status" aria-live="polite">
         {status}
+        {lastMsg && !sent ? (
+          <>
+            {' '}
+            If nothing opened,{' '}
+            <button className="act" onClick={copyMsg}>
+              {msgCopied ? 'your message is on your clipboard' : 'copy your message'}
+            </button>{' '}
+            or{' '}
+            <a className="act" href={gmail(lastMsg)} target="_blank" rel="noreferrer">
+              write it in Gmail
+            </a>
+            .
+          </>
+        ) : null}
       </p>
       <p className="contact-links">
         Or write to{' '}
@@ -181,11 +226,18 @@ export function Contact() {
       <footer className="colophon">
         <p>
           <b>Colophon.</b>
-          Set in Newsreader, with IBM Plex Mono for anything a machine wrote. The black hole is ray-traced in your browser through Schwarzschild geometry, the debris is
+          Set in Hubot Sans and Mona Sans, with Monaspace Neon for anything a machine wrote: one family, drawn to work together. The black hole is ray-traced in your browser through Schwarzschild geometry, the debris is
           modelled in code with Three.js, the sound is synthesized as you fall, and the cryptography in chapter III is real. Designed and built by {brand.person} in 2026.{' '}
           {brand.mark}.
         </p>
-        <button className="act" onClick={() => scrollToTarget(0, 5)} data-cursor="it takes a while">
+        <button
+          className="act"
+          onClick={() => {
+            scrollToTarget(0, 5)
+            focusTarget(0)
+          }}
+          data-cursor="it takes a while"
+        >
           Climb back out
         </button>
       </footer>

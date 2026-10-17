@@ -16,12 +16,14 @@ uniform vec2 uShift;
 uniform vec3 uMouse;   // xy: cursor in view units, z: lens strength
 uniform sampler2D uName;
 uniform vec4 uPlane;   // z, half width, half height, opacity
+uniform float uPlaneY; // the plate's height above the hole (phones lift it clear)
 uniform float uHeat;   // 0 far away .. 1 at the horizon
 uniform float uLock;   // JARVIS lock-in red
 uniform float uDim;
 uniform float uIntro;
 uniform float uFlash;
 uniform int uSteps;
+uniform float uSky;        // starlight: up during the approach, before the disk ignites
 
 out vec4 outColor;
 
@@ -111,7 +113,7 @@ vec4 disk(vec3 p, vec3 dir) {
 }
 
 vec4 namePlane(vec3 p) {
-  vec2 uv = vec2(p.x / uPlane.y, p.y / uPlane.z) * 0.5 + 0.5;
+  vec2 uv = vec2(p.x / uPlane.y, (p.y - uPlaneY) / uPlane.z) * 0.5 + 0.5;
   if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return vec4(0.0);
   float m = texture(uName, uv).r;
   vec3 c = mix(vec3(1.0, 0.94, 0.86), vec3(1.0, 0.22, 0.12), uLock);
@@ -142,7 +144,8 @@ vec3 stars(vec3 d) {
 vec3 background(vec3 d) {
   vec3 col = stars(d);
   float n = fbm(d * 2.2 + 4.0);
-  float band = exp(-pow(d.y * 2.4 + 0.3 * sin(d.x * 2.0), 2.0));
+  float b = d.y * 2.4 + 0.3 * sin(d.x * 2.0); // pow() of a negative base is undefined in GLSL
+  float band = exp(-b * b);
   col += vec3(0.4, 0.13, 0.06) * pow(n, 3.4) * 0.05 * (0.15 + band);
   return col;
 }
@@ -169,13 +172,16 @@ void main() {
   float minR = 1e4;
   bool absorbed = false;
 
-  for (int i = 0; i < 400; i++) {
-    if (i >= uSteps) break;
+  // from far out (the approach) rays need a few dozen extra steps to arrive
+  int budget = uSteps + (dot(uCamPos, uCamPos) > 1600.0 ? 48 : 0);
+  for (int i = 0; i < 448; i++) {
+    if (i >= budget) break;
     float r2 = dot(pos, pos);
     float r = sqrt(r2);
     minR = min(minR, r);
 
-    float dt = clamp(0.09 * r, 0.012, 2.0) * mix(0.45, 1.0, smoothstep(1.4, 4.5, r));
+    // steps grow with distance; past 40 rs nothing needs the 2-unit cap
+    float dt = clamp(0.09 * r, 0.012, r > 40.0 ? 0.09 * r : 2.0) * mix(0.45, 1.0, smoothstep(1.4, 4.5, r));
     vel += -1.5 * h2 * pos / (r2 * r2 * r) * dt;
     vec3 npos = pos + vel * dt;
 
@@ -200,10 +206,10 @@ void main() {
   }
 
   if (!absorbed) {
-    col += trans * background(normalize(vel)) * uIntro;
+    col += trans * background(normalize(vel)) * uSky;
     float glow = exp(-max(minR - 1.5, 0.0) * 2.4);
     vec3 gc = mix(mix(vec3(1.0, 0.55, 0.25), vec3(1.0, 0.2, 0.08), uHeat), vec3(1.0, 0.1, 0.05), uLock);
-    col += gc * glow * (0.14 + uFlash * 1.6) * uIntro;
+    col += gc * glow * (0.14 + uFlash * 1.6) * (uIntro + uSky * 0.6 * (1.0 - uIntro));
   }
 
   col *= uDim;

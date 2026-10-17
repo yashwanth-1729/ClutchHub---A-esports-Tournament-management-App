@@ -2,7 +2,7 @@ import Lenis from 'lenis'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { BlackHole, type CameraFrame } from '../gl/BlackHole'
-import { NAME_FONT, drawNamePlate } from '../gl/nameTexture'
+import { drawNamePlate, loadNameFont } from '../gl/nameTexture'
 import { audio } from '../audio/VoidAudio'
 import { brand } from '../content'
 
@@ -28,6 +28,25 @@ export const FRAMES: Record<string, CameraFrame> = {
 
 const KEYS = Object.keys(FRAMES.hero) as (keyof CameraFrame)[]
 
+/** Where the approach starts, in Schwarzschild radii: the number in the author's GitHub handle. */
+export const APPROACH_FROM = 1729
+
+/** Distance along the approach, log-spaced so the hole grows at a steady visual rate. */
+export function approachR(e: number) {
+  return Math.exp(Math.log(APPROACH_FROM) * (1 - e) + Math.log(FRAMES.hero.r) * e)
+}
+
+function approachFrame(e: number, out: CameraFrame) {
+  Object.assign(out, FRAMES.hero)
+  const k = 1 - e
+  out.r = approachR(e)
+  out.az = FRAMES.hero.az - 0.42 * k
+  out.el = FRAMES.hero.el + 0.22 * k
+  out.roll = 0.1 * k
+  out.name = 0
+  return out
+}
+
 export const state = {
   ready: false,
   reduced: typeof window !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -40,6 +59,9 @@ export const state = {
   lockTarget: 0,
   flash: 0,
   intro: 0,
+  /** 0..1 along the opening approach, driven by the loader. */
+  approach: 0,
+  sky: 0,
   frame: { ...FRAMES.hero } as CameraFrame,
   gamma: 1,
   outside: 0,
@@ -49,10 +71,14 @@ export const state = {
   plunge: 0,
   accent: [236, 230, 219] as [number, number, number],
   debugFrame: null as CameraFrame | null,
+  /** The canvas box in CSS pixels. On phones it is 100lvh, taller than innerHeight. */
+  viewW: typeof window !== 'undefined' ? window.innerWidth : 1,
+  viewH: typeof window !== 'undefined' ? window.innerHeight : 1,
 }
 
 type Listener = (dt: number) => void
 const listeners = new Set<Listener>()
+const warned = new WeakSet<Listener>()
 export function onFrame(fn: Listener) {
   listeners.add(fn)
   return () => {
@@ -85,6 +111,17 @@ export function scrollToTarget(target: string | number | HTMLElement, duration =
     const el = typeof target === 'string' ? document.querySelector(target) : target
     el?.scrollIntoView()
   }
+}
+
+/** After an in-page jump, move keyboard focus to the section's heading so the next Tab starts there. */
+export function focusTarget(target: string | number) {
+  const sec = typeof target === 'number' ? document.getElementById('top') : document.querySelector<HTMLElement>(target)
+  if (!sec) return
+  const id = sec.getAttribute('aria-labelledby')
+  const h = (id ? document.getElementById(id) : null) ?? sec.querySelector<HTMLElement>('h1, h2')
+  if (!h) return
+  if (!h.hasAttribute('tabindex')) h.tabIndex = -1
+  h.focus({ preventScroll: true })
 }
 
 function computeAnchors() {
@@ -143,11 +180,17 @@ export function forceQuality(q: number | null) {
   window.dispatchEvent(new Event('resize'))
 }
 
-export type Engine = { destroy: () => void; renderer: BlackHole | null }
+export type Engine = { destroy: () => void; renderer: BlackHole | null; replate: () => void }
 
 export function startEngine(canvas: HTMLCanvasElement | null): Engine {
   const root = document.documentElement
   let renderer: BlackHole | null = null
+
+  const measure = () => {
+    state.viewW = canvas?.clientWidth || window.innerWidth
+    state.viewH = canvas?.clientHeight || window.innerHeight
+  }
+  measure()
 
   if (canvas && BlackHole.supported()) {
     try {
@@ -161,14 +204,14 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
   root.classList.toggle('no-webgl', !renderer)
 
   // name plate: redraw when fonts land and when orientation flips
-  let portrait = window.innerWidth / window.innerHeight < 0.9
+  let portrait = state.viewW / state.viewH < 0.9
   const plate = () => {
     if (!renderer) return
     const p = drawNamePlate(brand.first, portrait)
-    renderer.setName(p.canvas, p.halfW, p.halfH, p.z)
+    renderer.setName(p.canvas, p.halfW, p.halfH, p.z, p.y)
   }
   plate()
-  document.fonts?.load(`italic 400 100px ${NAME_FONT}`).then(plate, () => {})
+  loadNameFont().then(plate, () => {})
 
   // resolution adapts to how fast this GPU actually is
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -184,13 +227,17 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
     lenis.stop()
   }
 
-  const onResize = () => {
-    const nowPortrait = window.innerWidth / window.innerHeight < 0.9
+  const fitCanvas = () => {
+    measure()
+    const nowPortrait = state.viewW / state.viewH < 0.9
     if (nowPortrait !== portrait) {
       portrait = nowPortrait
       plate()
     }
     applyScale()
+  }
+  const onResize = () => {
+    fitCanvas()
     computeAnchors()
   }
   window.addEventListener('resize', onResize)
@@ -199,7 +246,14 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
     ScrollTrigger.refresh()
   })
   ro.observe(document.body)
+  // the canvas box can change on its own when a phone's toolbar comes and goes
+  const cro = new ResizeObserver(fitCanvas)
+  if (canvas) cro.observe(canvas)
   computeAnchors()
+
+  // sections that stretch with scroll speed; written per element, only on change
+  let tidals = document.querySelectorAll<HTMLElement>('.tidal')
+  let lastStretch = ''
 
   const onMove = (e: PointerEvent) => {
     state.mouse.x = e.clientX
@@ -209,11 +263,28 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
   }
   window.addEventListener('pointermove', onMove, { passive: true })
 
-  let ema = 16
+  // Frame time, smoothed, against the display's own refresh interval, so a
+  // 60 Hz screen can climb back up and a 120 Hz one isn't judged by 60 Hz rules.
+  let ema = 16.7
+  let base = 16.7 // tracks the low end of the frame times: falls fast, rises slowly
+  let ceiling = maxQuality
+  let lastUp = false
   let sinceAdjust = 0
   let lastAccent = ''
   let hudClock = 0
+  let lastKey = ''
+  let lostFor = 0
   const start = performance.now()
+  const onVisibility = () => {
+    // the first frame back from a hidden tab is a stall, not a slow GPU
+    ema = base
+    sinceAdjust = 0
+  }
+  document.addEventListener('visibilitychange', onVisibility)
+  const fallBack = () => {
+    state.webgl = false
+    root.classList.add('no-webgl')
+  }
 
   const tick = (_t: number, deltaMs: number) => {
     const dt = Math.min(deltaMs, 100) / 1000
@@ -226,24 +297,30 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
     // camera
     const f = state.frame
     if (state.debugFrame) Object.assign(f, state.debugFrame)
+    else if (!state.ready) approachFrame(state.reduced ? 1 : state.approach, f)
     else frameAt(state.scrollY, f)
+    // stars come up as the approach starts; the name only once the disk has lit it
+    state.sky = state.ready ? 1 : Math.min(1, (state.reduced ? 1 : state.approach) * 6)
     if (state.plunge > 0.0001) {
       // the last few metres: straight down toward the horizon
       f.r += (1.03 - f.r) * state.plunge
       f.fov += (1.9 - f.fov) * state.plunge
     }
     const m = state.mouse
-    m.sx += (m.nx - m.sx) * 0.05
-    m.sy += (m.ny - m.sy) * 0.05
-    const aspect = window.innerWidth / window.innerHeight
+    if (!state.reduced) {
+      m.sx += (m.nx - m.sx) * 0.05
+      m.sy += (m.ny - m.sy) * 0.05
+    }
+    const aspect = state.viewW / state.viewH
     const drawn = { ...f }
+    drawn.name *= Math.min(1, Math.max(0, (state.intro - 0.3) / 0.6))
     drawn.az += m.sx * 0.1
     drawn.el -= m.sy * 0.045
     drawn.sx *= Math.min(1, Math.max(0.3, aspect / 1.78))
     if (aspect < 0.9) {
       drawn.fov = f.fov * 1.25
-      // on a phone the name needs the top half of the screen to itself
-      drawn.sy += 0.17 * f.name
+      // on a phone the name sits above the hole and the words below it
+      drawn.sy += 0.04 * f.name
     }
 
     state.lock += (state.lockTarget - state.lock) * (state.lockTarget > state.lock ? 0.06 : 0.04)
@@ -257,7 +334,12 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
     // tidal stretch from scroll speed
     const stretch = Math.min(Math.abs(state.velocity) * 0.006, 0.45)
     state.stretch += (stretch - state.stretch) * 0.15
-    root.style.setProperty('--stretch', state.stretch.toFixed(3))
+    const st = state.stretch.toFixed(3)
+    if (st !== lastStretch) {
+      lastStretch = st
+      if (tidals.length && !tidals[0].isConnected) tidals = document.querySelectorAll<HTMLElement>('.tidal')
+      tidals.forEach((el) => el.style.setProperty('--stretch', st))
+    }
 
     const acc = accentFor(f.heat, state.lock)
     state.accent = acc as [number, number, number]
@@ -272,34 +354,66 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
       root.style.setProperty('--lock', state.lock.toFixed(2))
     }
 
-    if (renderer) {
-      const lensOn = !state.touch && state.ready ? 1 : 0
-      const mx = (m.x - window.innerWidth / 2) / window.innerHeight
-      const my = -(m.y - window.innerHeight / 2) / window.innerHeight
-      renderer.render(drawn, {
-        time: state.reduced ? 12 : (performance.now() - start) / 1000,
-        mouse: [mx, my, 0.0011 * lensOn],
-        lock: state.lock,
-        intro: state.intro,
-        flash: state.flash,
-      })
+    if (renderer && state.webgl) {
+      // a context that stays lost for a few seconds isn't coming back
+      lostFor = renderer.lost ? lostFor + dt : 0
+      if (lostFor > 4) fallBack()
+    }
 
-      ema += (deltaMs - ema) * 0.05
-      sinceAdjust += dt
-      if (sinceAdjust > 1 && state.ready && forcedQuality === null) {
-        sinceAdjust = 0
-        if (ema > 24 && quality > 0.3) {
-          quality *= 0.85
-          applyScale()
-        } else if (ema < 13 && quality < maxQuality) {
-          quality = Math.min(maxQuality, quality * 1.06)
-          applyScale()
+    // The approach plays behind the loader, so this always draws; with reduced
+    // motion, only frames that changed.
+    if (renderer && state.webgl && !renderer.lost) {
+      const lensOn = !state.touch && state.ready && !state.reduced ? 1 : 0
+      const mx = (m.x - state.viewW / 2) / state.viewH
+      const my = -(m.y - state.viewH / 2) / state.viewH
+      const time = state.reduced ? 12 : (performance.now() - start) / 1000
+      let draw = true
+      if (state.reduced) {
+        const key = [drawn.r, drawn.az, drawn.el, drawn.sx, drawn.sy, drawn.fov, drawn.name, drawn.dim, drawn.heat, state.lock, state.flash, state.intro, state.sky, canvas!.width, canvas!.height]
+          .map((v) => v.toFixed(4))
+          .join()
+        draw = key !== lastKey
+        lastKey = key
+      }
+      if (draw) {
+        renderer.render(drawn, { time, mouse: [mx, my, 0.0011 * lensOn], lock: state.lock, intro: state.intro, flash: state.flash, sky: state.sky })
+
+        // stalls (a hidden tab, a long task) say nothing about the GPU
+        if (deltaMs < 100) {
+          const d = Math.min(Math.max(deltaMs, 4), 50)
+          base += (d - base) * (d < base ? 0.1 : 0.002)
+          ema += (d - ema) * 0.05
+        }
+        sinceAdjust += dt
+        if (sinceAdjust > 1 && forcedQuality === null) {
+          sinceAdjust = 0
+          if (ema > Math.max(24, base * 1.6) && quality > 0.3) {
+            // a step up that immediately costs frames becomes the ceiling
+            if (lastUp) ceiling = Math.max(0.3, quality / 1.06)
+            quality *= 0.85
+            lastUp = false
+            applyScale()
+          } else if (ema < base * 1.2 && quality < ceiling) {
+            quality = Math.min(ceiling, quality * 1.06)
+            lastUp = true
+            applyScale()
+          } else lastUp = false
         }
       }
     }
 
     audio.update(state.gamma, Math.abs(state.velocity), state.lock)
-    listeners.forEach((fn) => fn(dt))
+    // one broken listener must not take the others down with it
+    listeners.forEach((fn) => {
+      try {
+        fn(dt)
+      } catch (err) {
+        if (!warned.has(fn)) {
+          warned.add(fn)
+          console.error(err)
+        }
+      }
+    })
   }
 
   gsap.ticker.lagSmoothing(0)
@@ -307,11 +421,14 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
 
   return {
     renderer,
+    replate: plate,
     destroy() {
       gsap.ticker.remove(tick)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onMove)
+      document.removeEventListener('visibilitychange', onVisibility)
       ro.disconnect()
+      cro.disconnect()
       lenis?.destroy()
       lenis = null
       renderer?.dispose()

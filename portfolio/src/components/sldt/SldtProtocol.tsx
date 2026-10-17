@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { audio } from '../../audio/VoidAudio'
+import { state } from '../../engine/engine'
 
 const STEPS = [
   {
@@ -11,7 +12,7 @@ const STEPS = [
   {
     k: 'Seal',
     title: 'Every record travels sealed.',
-    body: 'Padded up to a fixed bucket (256 B, 1 KB, 4 KB…) so its length gives nothing away, then sealed with AES-256-GCM. The store receives bytes it can’t read and can’t change without being caught.',
+    body: 'Padded up to a fixed bucket (256 B, 1 KB, 4 KB…) so the store learns only the bucket, not the exact length, then sealed with AES-256-GCM. The store receives bytes it can’t read and can’t change without being caught.',
   },
   {
     k: 'Manifest',
@@ -21,7 +22,7 @@ const STEPS = [
   {
     k: 'Compare-and-swap',
     title: 'The store only has to do one smart thing.',
-    body: 'Refuse a write if the file changed since you read it. Lose that race and the whole cycle starts over with exponential backoff, 250 ms up to 8 s, re-reading what the other device wrote.',
+    body: 'Refuse a write if the file changed since you read it. Lose the race on the manifest and the whole cycle starts over with exponential backoff, 300 ms up to 8 s, re-reading what the other device wrote. Lose it on a single object and that sync stops; the next one pulls the other write and settles it.',
   },
   {
     k: 'Resolve',
@@ -96,7 +97,7 @@ export function SldtProtocol() {
             <text x="400" y="96" className="t-small t-center t-acc">64 bytes, split in two</text>
             <use href="#p-id-a" className="flow" />
             <use href="#p-id-b" className="flow" />
-            {step === 0 ? (
+            {!state.reduced && step === 0 ? (
               <>
                 <circle r="5" className="pkt">
                   <animateMotion dur="1.8s" repeatCount="indefinite">
@@ -155,7 +156,7 @@ export function SldtProtocol() {
                 9f 3c a1 07 e2 5b 44 d0…
               </text>
               <text x="296" y="448" className="t-mono t-dim">
-                note_0193.enc, 256 B
+                note_0193.enc, ~400 B
               </text>
             </g>
             <g className={`chain ${on(2)}`}>
@@ -189,7 +190,7 @@ export function SldtProtocol() {
                 256 B
               </text>
             </g>
-            {step === 1 ? (
+            {!state.reduced && step === 1 ? (
               <g className="pkt-env">
                 <rect x="-9" y="-7" width="18" height="14" rx="2" />
                 <animateMotion dur="2.2s" repeatCount="indefinite">
@@ -208,9 +209,9 @@ export function SldtProtocol() {
               200, written
             </text>
             <text x="560" y="452" className="t-mono t-red">
-              409, retry in 250 ms
+              409, retry in 300 ms
             </text>
-            {step === 3 ? (
+            {!state.reduced && step === 3 ? (
               <>
                 <circle r="5" className="pkt">
                   <animateMotion dur="1.6s" repeatCount="indefinite">

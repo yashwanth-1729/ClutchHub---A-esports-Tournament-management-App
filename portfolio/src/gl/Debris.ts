@@ -308,6 +308,8 @@ export class Debris {
   private rim: THREE.DirectionalLight
   private time = 0
   private wasVisible = true
+  private vw = 1
+  private vh = 1
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' })
@@ -359,8 +361,10 @@ export class Debris {
   }
 
   resize() {
-    const w = window.innerWidth
-    const h = window.innerHeight
+    // the canvas box (100lvh) can be taller than innerHeight on phones; draw to the box
+    const el = this.renderer.domElement
+    const w = (this.vw = el.clientWidth || window.innerWidth)
+    const h = (this.vh = el.clientHeight || window.innerHeight)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, state.touch ? 1.5 : 1.75))
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
@@ -369,8 +373,7 @@ export class Debris {
 
   update(dt: number, accent: [number, number, number]) {
     this.time += dt
-    const vw = window.innerWidth
-    const vh = window.innerHeight
+    const { vw, vh } = this
     const unit = (2 * 10 * Math.tan(THREE.MathUtils.degToRad(15))) / vh // world units per CSS px at z = 0
     const mobile = vw < 1180
     let any = false
@@ -406,7 +409,8 @@ export class Debris {
       const stretch = 1 + state.stretch * 1.6
       it.group.scale.set(size / Math.sqrt(stretch), size * stretch, size / Math.sqrt(stretch))
 
-      const t = this.time + it.phase
+      // with reduced motion only scrolling turns them
+      const t = (state.reduced ? 0 : this.time) + it.phase
       const scrollSpin = offset * 1.2
       it.pivot.rotation.set(
         Math.sin(t * it.spin.x) * 0.6 + scrollSpin * 0.4 + state.mouse.sy * 0.25,
@@ -417,7 +421,7 @@ export class Debris {
       if (it.glow) {
         const hot = it.id === 'jarvis' ? Math.max(state.lock, 0) : signals.tampered ? 1 : 0
         it.glow.emissive.copy(ORANGE).lerp(RED, hot)
-        const blink = it.id === 'sldt' && signals.tampered ? 0.5 + 0.5 * Math.sin(this.time * 14) : 1
+        const blink = it.id === 'sldt' && signals.tampered && !state.reduced ? 0.5 + 0.5 * Math.sin(this.time * 14) : 1
         it.glow.emissiveIntensity = (2.2 + (it.id === 'jarvis' ? signals.voice * 4 : 0)) * blink
       }
     }

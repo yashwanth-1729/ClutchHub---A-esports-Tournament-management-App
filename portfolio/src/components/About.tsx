@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
-// A trailing * sets a word in italic as it lights up.
+// A trailing * sets a word in the light's colour as it lights up.
 const TEXT =
   'I build whole products. The part you touch:* onboarding, dashboards, gestures, the words on the buttons. And the part you don’t:* the APIs, the locks, the queues, the ciphers.'
 

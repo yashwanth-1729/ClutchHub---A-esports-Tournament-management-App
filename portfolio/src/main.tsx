@@ -1,7 +1,10 @@
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/newsreader/opsz.css'
-import '@fontsource-variable/newsreader/opsz-italic.css'
-import '@fontsource/ibm-plex-mono/400.css'
+// One type family in three voices, designed together: Hubot Sans for display,
+// Mona Sans for reading, Monaspace Neon for anything a machine wrote.
+import '@fontsource-variable/hubot-sans/wdth.css'
+import '@fontsource-variable/mona-sans/wdth.css'
+import '@fontsource/monaspace-neon/400.css'
+import '@fontsource/monaspace-neon/500.css'
 import 'lenis/dist/lenis.css'
 import './styles/global.css'
 import './styles/demos.css'

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { audio } from '../../audio/VoidAudio'
 import { signals } from '../../engine/signals'
+import { state } from '../../engine/engine'
 import { useInView } from '../../lib/hooks'
 
 // Free Fire squad placement points, 1st to 12th.
@@ -30,6 +31,9 @@ export function ClutchDemo() {
 
   const matchRef = useRef(0)
   const rowsRef = useRef(rows)
+  // plays itself unless the visitor prefers less motion, and can always be paused
+  const [auto, setAuto] = useState(!state.reduced)
+  const timer = useRef(0)
 
   const play = () => {
     // remember where every row is before the reshuffle
@@ -63,6 +67,7 @@ export function ClutchDemo() {
 
   useLayoutEffect(() => {
     // FLIP: animate each row from where it was to where it is now
+    if (state.reduced) return void positions.current.clear()
     body.current?.querySelectorAll<HTMLElement>('[data-name]').forEach((el) => {
       const was = positions.current.get(el.dataset.name!)
       if (was === undefined) return
@@ -74,10 +79,19 @@ export function ClutchDemo() {
   }, [rows])
 
   useEffect(() => {
-    if (!inView) return
-    const id = window.setInterval(play, 3200)
-    return () => window.clearInterval(id)
-  }, [inView])
+    if (!inView || !auto) return
+    timer.current = window.setInterval(play, 3200)
+    return () => window.clearInterval(timer.current)
+  }, [inView, auto])
+
+  // a manual match resets the clock, so the next automatic one is a full interval away
+  const playNow = () => {
+    play()
+    if (inView && auto) {
+      window.clearInterval(timer.current)
+      timer.current = window.setInterval(play, 3200)
+    }
+  }
 
   const done = match >= MAPS.length
   return (
@@ -90,7 +104,12 @@ export function ClutchDemo() {
           <span role="columnheader">#</span>
           <span role="columnheader">Squad</span>
           <span role="columnheader">Kills</span>
-          <span role="columnheader">Placement</span>
+          <span role="columnheader">
+            <span className="wide-only">Placement</span>
+            <span className="narrow-only" aria-hidden="true">
+              Place
+            </span>
+          </span>
           <span role="columnheader">Total</span>
         </div>
         {rows.map((r, i) => {
@@ -116,8 +135,12 @@ export function ClutchDemo() {
       </div>
       <p className="ch-foot">
         Total is kills plus placement points, {PLACEMENT.slice(0, 4).join(', ')}… down to zero for twelfth.{' '}
-        <button className="act" onClick={play}>
+        <button className="act" onClick={playNow}>
           {done ? 'Run another tournament' : 'Play the next match'}
+        </button>
+        , or{' '}
+        <button className="act" onClick={() => setAuto((a) => !a)}>
+          {auto ? 'stop it playing itself' : 'let it play itself'}
         </button>
         .
       </p>

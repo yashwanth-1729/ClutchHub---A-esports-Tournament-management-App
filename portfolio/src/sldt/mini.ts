@@ -70,23 +70,60 @@ export function newIdentity(): Identity {
 
 export const recoveryCode = (id: Identity) => `SLDT:${id.datasetId}:${id.secret}`
 
-/** Argon2id with the real engine's parameters; falls back to less memory on devices that refuse 64 MiB. */
-export async function deriveKeys(id: Identity): Promise<Keys> {
+type ArgonResult = { out: Uint8Array; memoryKiB: number; ms: number }
+type ArgonRequest = { password: string; salt: Uint8Array; iterations: number; memoryKiB: number; bytes: number }
+
+function argonInWorker(req: ArgonRequest): Promise<ArgonResult> {
+  return new Promise((resolve, reject) => {
+    let w: Worker
+    try {
+      w = new Worker(new URL('./argon.worker.ts', import.meta.url), { type: 'module' })
+    } catch (e) {
+      reject(e)
+      return
+    }
+    w.onmessage = (e: MessageEvent<{ ok: boolean; error?: string } & ArgonResult>) => {
+      w.terminate()
+      if (e.data.ok) resolve(e.data)
+      else reject(new Error(e.data.error))
+    }
+    w.onerror = (e) => {
+      w.terminate()
+      reject(new Error(e.message || 'argon2 worker failed'))
+    }
+    w.postMessage(req)
+  })
+}
+
+async function argonOnMainThread(req: ArgonRequest): Promise<ArgonResult> {
   const { argon2id } = await import('hash-wasm')
   const t0 = performance.now()
-  const salt = te.encode(id.datasetId).slice(0, 32)
-  let memoryKiB = ARGON.memoryKiB
+  let memoryKiB = req.memoryKiB
+  const run = () => argon2id({ password: req.password, salt: req.salt, iterations: req.iterations, memorySize: memoryKiB, parallelism: 1, hashLength: req.bytes, outputType: 'binary' })
   let out: Uint8Array
   try {
-    out = await argon2id({ password: id.secret, salt, iterations: ARGON.iterations, memorySize: memoryKiB, parallelism: 1, hashLength: ARGON.bytes, outputType: 'binary' })
+    out = await run()
   } catch {
     memoryKiB = 16384
-    out = await argon2id({ password: id.secret, salt, iterations: ARGON.iterations, memorySize: memoryKiB, parallelism: 1, hashLength: ARGON.bytes, outputType: 'binary' })
+    out = await run()
+  }
+  return { out, memoryKiB, ms: performance.now() - t0 }
+}
+
+/** Argon2id with the real engine's parameters; falls back to less memory on devices that refuse 64 MiB. */
+export async function deriveKeys(id: Identity): Promise<Keys> {
+  // the datasetId is the salt, exactly as in the real engine
+  const req: ArgonRequest = { password: id.secret, salt: te.encode(id.datasetId).slice(0, 32), iterations: ARGON.iterations, memoryKiB: ARGON.memoryKiB, bytes: ARGON.bytes }
+  let res: ArgonResult
+  try {
+    res = await argonInWorker(req)
+  } catch {
+    res = await argonOnMainThread(req)
   }
   // domain separation: the first half only ever encrypts, the second only ever signs
-  const aes = await crypto.subtle.importKey('raw', out.slice(0, 32), 'AES-GCM', false, ['encrypt', 'decrypt'])
-  const mac = await crypto.subtle.importKey('raw', out.slice(32, 64), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])
-  return { aes, mac, ms: performance.now() - t0, memoryKiB }
+  const aes = await crypto.subtle.importKey('raw', res.out.slice(0, 32), 'AES-GCM', false, ['encrypt', 'decrypt'])
+  const mac = await crypto.subtle.importKey('raw', res.out.slice(32, 64), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])
+  return { aes, mac, ms: res.ms, memoryKiB: res.memoryKiB }
 }
 
 // ---------- objects & manifest ----------
@@ -183,7 +220,8 @@ export class Device {
       type: 'note',
       deleted: false,
       payload: { body },
-      revision: (prev?.revision ?? 0) + (prev?.pending ? 0 : 1),
+      // bumped on every local edit, as in the real engine's upsert
+      revision: (prev?.revision ?? 0) + 1,
       deviceId: this.id,
       pending: true,
       lastHash: prev?.lastHash ?? null,
@@ -194,6 +232,12 @@ export class Device {
 
 export type SyncResult = { pulled: number; pushed: number; revision: number; retries: number }
 
+/**
+ * One sync call, with the real engine's retry policy: losing the race on the
+ * manifest restarts the whole cycle with exponential backoff (300 ms up to
+ * 8 s, eight attempts). Losing it on an object write ends this call; the
+ * next sync pulls what the other device wrote and resolves the conflict.
+ */
 export async function sync(dev: Device, store: DumbStore, keys: Keys, prefix: string, log: Log, pauseMs = 0): Promise<SyncResult> {
   let retries = 0
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -201,14 +245,16 @@ export async function sync(dev: Device, store: DumbStore, keys: Keys, prefix: st
       const r = await attemptSync(dev, store, keys, prefix, log, pauseMs)
       return { ...r, retries }
     } catch (e) {
-      if (!(e instanceof ConcurrentWriteConflict)) throw e
+      if (!(e instanceof ConcurrentWriteConflict) || !e.message.endsWith('manifest.json')) throw e
       retries++
-      const ms = Math.min(8000, 250 * 2 ** attempt)
-      log({ text: `${dev.name}  409: ${e.message.split('/').pop()} changed since we read it, retrying in ${ms} ms`, cls: 'warn' })
-      await sleep(ms)
+      if (attempt < 7) {
+        const ms = Math.min(8000, 300 * 2 ** attempt)
+        log({ text: `${dev.name}  409: the manifest changed since we read it, retrying the cycle in ${ms} ms`, cls: 'warn' })
+        await sleep(ms)
+      }
     }
   }
-  throw new Error('gave up after 8 lost races')
+  throw new Error('gave up after 8 lost races on the manifest')
 }
 
 async function attemptSync(dev: Device, store: DumbStore, keys: Keys, prefix: string, log: Log, pauseMs: number) {

@@ -19,7 +19,7 @@
 }
 .marked {
   position: relative;
-  font-style: italic;
+  font-weight: 560;
   white-space: nowrap;
 }
 .marked .scribble {
@@ -55,39 +55,45 @@
   gap: 8px;
   padding: 12px 0;
   border-top: 1px solid var(--rule);
-  opacity: 0.35;
-  transition: opacity 0.5s var(--ease);
+  /* dimmed by colour, not opacity, so the inactive steps stay readable */
+  color: var(--fg-3);
+  transition: color 0.5s var(--ease);
 }
 .proto-steps li.done {
-  opacity: 0.55;
+  color: var(--fg-2);
 }
 .proto-steps li.active {
-  opacity: 1;
+  color: var(--fg);
 }
 .proto-n {
-  font-size: 30px;
+  font-family: var(--display);
+  font-stretch: 125%;
+  font-size: var(--fs-lede);
   font-weight: 250;
-  font-variation-settings: 'opsz' 72;
-  line-height: 0.9;
+  line-height: 1;
 }
 .proto-steps h3 {
-  margin: 2px 0 0;
-  font-weight: 400;
-  font-size: clamp(19px, 1.5vw, 23px);
+  margin: 0;
+  font-weight: 540;
+  font-size: var(--fs-lede);
   line-height: 1.25;
+  letter-spacing: -0.012em;
 }
 .proto-k {
-  font-style: italic;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
-  font-weight: 300;
-  font-size: 0.82em;
-  margin-left: 0.3em;
+  margin-left: 0.8em;
+  vertical-align: 0.2em;
 }
 .proto-body {
   margin: 0;
   max-height: 0;
   overflow: hidden;
-  font-size: 16.5px;
+  font-size: var(--fs-body);
   line-height: 1.55;
   color: var(--fg-2);
   transition: max-height 0.7s var(--ease), margin 0.5s var(--ease);
@@ -112,7 +118,7 @@
 }
 .proto-svg text {
   fill: var(--fg);
-  font-family: var(--serif);
+  font-family: var(--text);
   font-size: 15px;
 }
 .proto-svg .t-mono {
@@ -121,12 +127,15 @@
 }
 .proto-svg .t-small {
   font-size: 13.5px;
-  font-style: italic;
   fill: var(--fg-2);
 }
 .proto-svg .t-label {
-  font-size: 17px;
-  font-style: italic;
+  font-family: var(--display);
+  font-stretch: 125%;
+  font-weight: 650;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .proto-svg .t-center { text-anchor: middle; }
 .proto-svg .t-end { text-anchor: end; }
@@ -231,18 +240,20 @@
 }
 .lab-step {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--fg-2);
   max-width: 52rem;
 }
+.lab-step i {
+  color: var(--fg);
+}
 .lab-step .dim {
   color: var(--fg-3);
-  font-style: italic;
 }
 .lab-code {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--fs-data);
   color: var(--pencil);
 }
 .lab-grid {
@@ -276,7 +287,15 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 19px;
+  gap: 12px;
+}
+.lab-col-head i {
+  font-family: var(--display);
+  font-stretch: 125%;
+  font-weight: 650;
+  font-size: var(--fs-caps);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .lab-col-head .mono {
   color: var(--fg-3);
@@ -288,9 +307,10 @@
   border: 0;
   border-bottom: 1px solid var(--rule);
   color: var(--fg);
-  font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 300;
+  font-family: var(--text);
+  font-size: var(--fs-lede);
+  font-weight: 340;
+  letter-spacing: -0.012em;
   line-height: 1.3;
   padding: 6px 0;
   outline: none;
@@ -303,7 +323,7 @@
 }
 .lab-meta {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--fg-2);
 }
@@ -312,7 +332,6 @@
 }
 .lab-meta .bad {
   color: var(--red);
-  font-style: italic;
 }
 .lab-path {
   margin: 4px 0 0;
@@ -339,12 +358,16 @@
 .lab-chain {
   margin: 4px 0 0;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-data);
   color: var(--fg-3);
 }
 .lab-chain i {
-  font-family: var(--serif);
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-2);
 }
 .lab-log {
   min-height: 170px !important;
@@ -374,14 +397,17 @@
   grid-template-columns: 34px 1fr;
 }
 .note-n {
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--pencil);
-  font-style: italic;
-  padding-top: 2px;
+  padding-top: 5px;
 }
 .notes p {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--fs-body);
   line-height: 1.55;
   color: var(--fg-2);
 }
@@ -396,17 +422,17 @@
 .tally p {
   margin: 0;
   display: grid;
-  gap: 6px;
-  font-style: italic;
-  font-size: 16px;
+  gap: 10px;
+  font-size: var(--fs-small);
   color: var(--fg-2);
   max-width: 16rem;
 }
 .tally-n {
-  font-style: normal;
-  font-size: clamp(56px, 6.4vw, 112px);
+  /* Mona at Hubot's width: same figure, but a plain zero */
+  font-family: var(--text);
+  font-stretch: 125%;
+  font-size: var(--fs-title);
   font-weight: 200;
-  font-variation-settings: 'opsz' 72;
   line-height: 0.9;
   letter-spacing: -0.03em;
   color: var(--fg);
@@ -414,7 +440,7 @@
 .threat {
   margin: 0;
   max-width: 44rem;
-  font-size: 17px;
+  font-size: var(--fs-body);
   color: var(--fg-2);
 }
 
@@ -431,8 +457,14 @@
     max-height: 40svh;
     order: -1;
   }
+  /* one step on screen at a time, all five still in the accessibility tree */
   .proto-steps li:not(.active) {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .lab-grid {
     grid-template-columns: 1fr 1fr;
@@ -470,7 +502,16 @@
   }
 }
 .lab-aside {
-  font-style: italic;
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-svg .flow {
+    animation: none;
+  }
 }

@@ -142,7 +142,7 @@ export function Work() {
             </span>
           </h2>
         </div>
-        <p className="lede">Four things I built, caught in the fall. Each one carries a working piece of itself, so you don’t have to take my word for it.</p>
+        <p className="lede">Four things I built, caught in the fall. Each one comes with a small working model of how it behaves.</p>
       </section>
       {projects.map((p, i) => (
         <ProjectSection key={p.id} p={p} fig={i + 1} />
