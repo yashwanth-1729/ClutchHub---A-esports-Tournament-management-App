@@ -21,6 +21,8 @@
   --display: 'Hubot Sans Variable', 'Mona Sans Variable', system-ui, sans-serif;
   --text: 'Mona Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'Monaspace Neon', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Mona has no Telugu, so those letters fall through to a Noto drawn to sit beside it */
+  --telugu: 'Mona Sans Variable', 'Noto Sans Telugu Variable', 'Nirmala UI', 'Gautami', sans-serif;
 
   /* the whole scale; nothing on the page is set at any other size */
   --fs-mega: clamp(64px, 10.5vw, 188px); /* chapter numerals, the horizon */

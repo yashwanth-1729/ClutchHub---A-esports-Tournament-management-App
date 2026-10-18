@@ -6,9 +6,9 @@ import { useFrame, useInView } from '../../lib/hooks'
 
 type Lang = 'en' | 'te' | 'hi'
 const LINES: Record<Lang, { label: string; text: string; lang: string }> = {
-  en: { label: 'English', text: 'Morning. Two study blocks today, the first one at seven. Want me to hold you to it?', lang: 'en' },
-  te: { label: 'తెలుగు', text: 'శుభోదయం. ఈరోజు రెండు స్టడీ బ్లాక్స్ ఉన్నాయి, మొదటిది ఏడు గంటలకు.', lang: 'te' },
-  hi: { label: 'Hinglish', text: 'Good morning! Aaj do study blocks hain, pehla saat baje. Lock in karein?', lang: 'hi-Latn' },
+  en: { label: 'English', text: 'Hello from beyond the horizon. I’m JARVIS. Tell me what matters, and I won’t let you forget it.', lang: 'en' },
+  te: { label: 'తెలుగు', text: 'నమస్కారం. నేను జార్విస్. మీకు ముఖ్యమైనది ఏదైనా చెప్పండి, మీరు మర్చిపోకుండా నేను గుర్తుచేస్తాను.', lang: 'te' },
+  hi: { label: 'Hinglish', text: 'Namaste. Main JARVIS hoon. Jo bhi zaroori hai, mujhe batao. Yaad dilana mera kaam hai.', lang: 'hi-Latn' },
 }
 const LOCK_LINE = 'Locked in. I’ll keep everything else quiet until you’re done.'
 const HOLD_MS = 1100
@@ -340,7 +340,7 @@ export function JarvisDemo() {
 
   const pick = (l: Lang) => {
     setLang(l)
-    speak(LINES[l].text, l, 3200)
+    speak(LINES[l].text, l, 4600)
   }
 
   const lockIn = () => {

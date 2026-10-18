@@ -25,7 +25,7 @@ Any static host works. On Vercel, import the repository and keep the detected Vi
 
 - Copy, projects, links and the index all live in `src/content.ts`. Empty links (Instagram, LinkedIn, website) stay hidden until they are filled in.
 - Camera framing per section lives in `FRAMES` in `src/engine/engine.ts`.
-- The JARVIS figure's voice clips in `public/voice/` are Gemini TTS voice "Alnilam" through OpenRouter, chosen against a "voice from the void" brief by a three-model listening panel. Long pauses are capped at a quarter second and the pace raised 1.12x (pitch kept), then they are given a reverb built from the same decaying-noise impulse as the drone (wet 12 LU under dry, 25 ms pre-delay), and levelled to -18 LUFS. The drone ducks while they play. Set `HAS_VOICE` to `false` in `src/components/demos/JarvisDemo.tsx` for text only.
+- The JARVIS figure's voice clips in `public/voice/` are Gemini TTS voice "Alnilam" through OpenRouter, chosen against a "voice from the void" brief by a three-model listening panel. Long pauses are capped at about 0.2 s and the pace raised 1.1-1.2x (pitch kept), then they are given a reverb built from the same decaying-noise impulse as the drone (wet 12 LU under dry, 25 ms pre-delay), and levelled to -18 LUFS. The drone ducks while they play. Set `HAS_VOICE` to `false` in `src/components/demos/JarvisDemo.tsx` for text only.
 
 ## Accessibility
 
@@ -33,4 +33,4 @@ Any static host works. On Vercel, import the repository and keep the detected Vi
 
 ## Colophon
 
-Set in Hubot Sans (display) and Mona Sans (text), with Monaspace Neon for anything a machine wrote: one family in three voices, on a single type scale defined in `src/styles/global.css`. Built with React, Vite, GSAP, Lenis, Three.js and raw WebGL2.
+Set in Hubot Sans (display) and Mona Sans (text), with Monaspace Neon for anything a machine wrote and Noto Sans Telugu for Telugu: one family in three voices, on a single type scale defined in `src/styles/global.css`. Built with React, Vite, GSAP, Lenis, Three.js and raw WebGL2.
