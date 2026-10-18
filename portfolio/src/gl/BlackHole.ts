@@ -146,16 +146,17 @@ export class BlackHole {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
   }
 
-  /** Render scale relative to CSS pixels. The image is soft by nature, so this can drop a lot. */
-  resize(scale: number) {
+  /** Render scale relative to CSS pixels. The image is soft by nature, so this can drop a lot.
+   *  Returns true when the drawing buffer changed size, which also wiped it. */
+  resize(scale: number): boolean {
     this.scale = scale
     // measured from the canvas box itself, which can be taller than innerHeight on phones
     const w = Math.max(2, Math.round((this.canvas.clientWidth || window.innerWidth) * scale))
     const h = Math.max(2, Math.round((this.canvas.clientHeight || window.innerHeight) * scale))
-    if (this.canvas.width !== w || this.canvas.height !== h) {
-      this.canvas.width = w
-      this.canvas.height = h
-    }
+    if (this.canvas.width === w && this.canvas.height === h) return false
+    this.canvas.width = w
+    this.canvas.height = h
+    return true
   }
 
   get resolutionScale() {

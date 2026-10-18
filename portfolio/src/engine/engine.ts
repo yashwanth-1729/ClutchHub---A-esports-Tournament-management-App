@@ -1,7 +1,7 @@
 import Lenis from 'lenis'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { BlackHole, type CameraFrame } from '../gl/BlackHole'
+import { BlackHole, type CameraFrame, type FrameUniforms } from '../gl/BlackHole'
 import { drawNamePlate, loadNameFont } from '../gl/nameTexture'
 import { audio } from '../audio/VoidAudio'
 import { brand } from '../content'
@@ -218,7 +218,13 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
   let quality = state.touch ? 0.42 : 0.62
   const maxQuality = state.touch ? 0.6 : 0.9
   if (renderer) renderer.steps = state.touch ? 110 : 170
-  const applyScale = () => renderer?.resize(forcedQuality ?? Math.max(0.3, Math.min(1.4, quality * dpr)))
+  // Resizing a canvas wipes it. Outside the frame loop (window or toolbar
+  // resizes) the last frame is drawn again at once, so no empty frame is shown.
+  let lastFrame: { f: CameraFrame; u: FrameUniforms } | null = null
+  const applyScale = (redraw = true) => {
+    const changed = renderer?.resize(forcedQuality ?? Math.max(0.3, Math.min(1.4, quality * dpr)))
+    if (changed && redraw && lastFrame && renderer && !renderer.lost) renderer.render(lastFrame.f, lastFrame.u)
+  }
   applyScale()
 
   if (!state.reduced) {
@@ -269,6 +275,9 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
   let base = 16.7 // tracks the low end of the frame times: falls fast, rises slowly
   let ceiling = maxQuality
   let lastUp = false
+  // a verdict has to hold for two checks in a row before the resolution moves
+  let slowRuns = 0
+  let fastRuns = 0
   let sinceAdjust = 0
   let lastAccent = ''
   let hudClock = 0
@@ -375,30 +384,42 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
         draw = key !== lastKey
         lastKey = key
       }
+      // Resolution is settled before drawing: a resize after the draw would
+      // wipe the frame just drawn and put a black one on screen.
+      // Stalls (a hidden tab, a long task) and frames with nothing to draw say nothing about the GPU.
+      if (draw && deltaMs < 100) {
+        const d = Math.min(Math.max(deltaMs, 4), 50)
+        base += (d - base) * (d < base ? 0.1 : 0.002)
+        ema += (d - ema) * 0.05
+      }
+      sinceAdjust += dt
+      if (sinceAdjust > 1 && forcedQuality === null) {
+        sinceAdjust = 0
+        const slow = ema > Math.max(24, base * 1.6) && quality > 0.3
+        // never step up mid-scroll, when frame times are noisiest
+        const fast = ema < base * 1.2 && quality < ceiling && Math.abs(state.velocity) < 2
+        slowRuns = slow ? slowRuns + 1 : 0
+        fastRuns = fast ? fastRuns + 1 : 0
+        if (slowRuns >= 2) {
+          // a step up that immediately costs frames becomes the ceiling
+          if (lastUp) ceiling = Math.max(0.3, quality / 1.06)
+          quality *= 0.85
+          lastUp = false
+          slowRuns = 0
+          applyScale(false)
+          draw = true
+        } else if (fastRuns >= 2) {
+          quality = Math.min(ceiling, quality * 1.06)
+          lastUp = true
+          fastRuns = 0
+          applyScale(false)
+          draw = true
+        } else if (!slow && !fast) lastUp = false
+      }
       if (draw) {
-        renderer.render(drawn, { time, mouse: [mx, my, 0.0011 * lensOn], lock: state.lock, intro: state.intro, flash: state.flash, sky: state.sky })
-
-        // stalls (a hidden tab, a long task) say nothing about the GPU
-        if (deltaMs < 100) {
-          const d = Math.min(Math.max(deltaMs, 4), 50)
-          base += (d - base) * (d < base ? 0.1 : 0.002)
-          ema += (d - ema) * 0.05
-        }
-        sinceAdjust += dt
-        if (sinceAdjust > 1 && forcedQuality === null) {
-          sinceAdjust = 0
-          if (ema > Math.max(24, base * 1.6) && quality > 0.3) {
-            // a step up that immediately costs frames becomes the ceiling
-            if (lastUp) ceiling = Math.max(0.3, quality / 1.06)
-            quality *= 0.85
-            lastUp = false
-            applyScale()
-          } else if (ema < base * 1.2 && quality < ceiling) {
-            quality = Math.min(ceiling, quality * 1.06)
-            lastUp = true
-            applyScale()
-          } else lastUp = false
-        }
+        const u = { time, mouse: [mx, my, 0.0011 * lensOn] as [number, number, number], lock: state.lock, intro: state.intro, flash: state.flash, sky: state.sky }
+        renderer.render(drawn, u)
+        lastFrame = { f: drawn, u }
       }
     }
 

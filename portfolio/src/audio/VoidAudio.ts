@@ -60,7 +60,7 @@ export class VoidAudio {
     const conv = ctx.createConvolver()
     conv.buffer = impulse(ctx, 4.5, 2.6)
     this.verb = ctx.createGain()
-    this.verb.gain.value = 0.55
+    this.verb.gain.value = 0.35
     this.verb.connect(conv).connect(this.master)
 
     this.filter = ctx.createBiquadFilter()
@@ -68,7 +68,7 @@ export class VoidAudio {
     this.filter.frequency.value = 420
     this.filter.Q.value = 0.9
     const drone = ctx.createGain()
-    drone.gain.value = 0.16
+    drone.gain.value = 0.11
     this.filter.connect(drone)
     drone.connect(this.master)
     drone.connect(this.verb)
@@ -108,7 +108,7 @@ export class VoidAudio {
     this.windFilter.frequency.value = 380
     this.windFilter.Q.value = 0.7
     this.wind = ctx.createGain()
-    this.wind.gain.value = 0.02
+    this.wind.gain.value = 0.01
     noise.connect(this.windFilter).connect(this.wind)
     this.wind.connect(this.master)
     this.wind.connect(this.verb)
@@ -123,7 +123,8 @@ export class VoidAudio {
     const t = this.ctx.currentTime
     this.master.gain.cancelScheduledValues(t)
     this.master.gain.setValueAtTime(this.master.gain.value, t)
-    this.master.gain.linearRampToValueAtTime(on ? 0.9 : 0, t + (on ? 2.5 : 0.6))
+    // a bed under the page, not the main event: kept well below the voice
+    this.master.gain.linearRampToValueAtTime(on ? 0.55 : 0, t + (on ? 2.5 : 0.6))
     this.enabled = on
     if (!on) {
       // once the fade is done, stop the graph rather than synthesizing silence
@@ -142,7 +143,7 @@ export class VoidAudio {
   /** Lower everything synthesized here while a voice clip plays over it. */
   duck(on: boolean) {
     if (!this.ctx) return
-    this.ducker.gain.setTargetAtTime(on ? 0.3 : 1, this.ctx.currentTime, on ? 0.08 : 0.35)
+    this.ducker.gain.setTargetAtTime(on ? 0.18 : 1, this.ctx.currentTime, on ? 0.08 : 0.35)
   }
 
   subscribe(fn: (on: boolean) => void) {
@@ -160,7 +161,7 @@ export class VoidAudio {
     this.oscs.forEach((o, i) => o.frequency.setTargetAtTime(base * this.ratios[i], t, 0.4))
     const cutoff = 520 / Math.pow(gamma, 0.8) + lock * 260
     this.filter.frequency.setTargetAtTime(cutoff, t, 0.3)
-    this.wind.gain.setTargetAtTime(0.02 + Math.min(speed / 60, 1) * 0.12, t, 0.15)
+    this.wind.gain.setTargetAtTime(0.01 + Math.min(speed / 60, 1) * 0.05, t, 0.15)
     this.windFilter.frequency.setTargetAtTime(300 + Math.min(speed / 60, 1) * 600, t, 0.2)
   }
 
@@ -173,7 +174,7 @@ export class VoidAudio {
     o.frequency.value = SCALE[Math.abs(index) % SCALE.length] * 2
     const g = ctx.createGain()
     g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(0.035, t + 0.008)
+    g.gain.linearRampToValueAtTime(0.02, t + 0.008)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7)
     const f = ctx.createBiquadFilter()
     f.type = 'lowpass'
@@ -195,7 +196,7 @@ export class VoidAudio {
     o.frequency.setValueAtTime(140, t)
     o.frequency.exponentialRampToValueAtTime(38, t + 0.5)
     const g = ctx.createGain()
-    g.gain.setValueAtTime(0.5, t)
+    g.gain.setValueAtTime(0.3, t)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9)
     o.connect(g)
     g.connect(this.master)
@@ -218,7 +219,7 @@ export class VoidAudio {
     f.frequency.exponentialRampToValueAtTime(90, t + 1.6)
     const g = ctx.createGain()
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.5, t + 1.4)
+    g.gain.exponentialRampToValueAtTime(0.3, t + 1.4)
     g.gain.setValueAtTime(0.0001, t + 1.55)
     src.connect(f).connect(g)
     g.connect(this.master)

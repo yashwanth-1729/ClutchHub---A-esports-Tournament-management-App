@@ -3,31 +3,38 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { audio } from '../../audio/VoidAudio'
 import { state } from '../../engine/engine'
 
+// Each step leads with plain words; the exact mechanism sits in a small
+// "under the hood" line for anyone who wants it.
 const STEPS = [
   {
-    k: 'Identity',
-    title: 'The recovery code is the account.',
-    body: 'SLDT:<datasetId>:<secret>. No login, no password reset. Argon2id at 64 MiB stretches it into 64 bytes, split into an encryption key and a signing key, so a weakness in one can’t leak into the other. The secret never touches disk.',
+    k: 'Your key',
+    title: 'One code is your whole account.',
+    body: 'No sign-up and no password. Your devices share one recovery code, and everything is locked and unlocked with keys made from it. The code never leaves your devices; lose it, and the data stays locked for good.',
+    tech: 'Argon2id at 64 MiB turns the code into two separate keys: one to encrypt, one to sign.',
   },
   {
-    k: 'Seal',
-    title: 'Every record travels sealed.',
-    body: 'Padded up to a fixed bucket (256 B, 1 KB, 4 KB…) so the store learns only the bucket, not the exact length, then sealed with AES-256-GCM. The store receives bytes it can’t read and can’t change without being caught.',
+    k: 'Locked',
+    title: 'Notes are locked before they leave.',
+    body: 'Every note is encrypted on your device. The storage only ever holds scrambled bytes it can’t read, and can’t change without your devices noticing. Notes are padded to set sizes, so even their length gives little away.',
+    tech: 'AES-256-GCM, padded to size buckets of 256 B, 1 KB, 4 KB and up.',
   },
   {
-    k: 'Manifest',
-    title: 'One small index keeps everyone honest.',
-    body: 'Every object, its revision and its ciphertext hash, in one manifest that is HMAC-signed, numbered, and chained to the hash of the one before it. Forge it and the signature fails. Replay an old one and the revision check fails. Both are hard stops.',
+    k: 'Signed list',
+    title: 'A signed list keeps everyone honest.',
+    body: 'One small list says which notes exist and exactly what each should look like. Your key signs it, and each version points back to the one before. If anyone edits it or slips in an old copy, your devices refuse it and stop.',
+    tech: 'An HMAC-signed, numbered, hash-chained manifest. Tampering and replay are hard stops.',
   },
   {
-    k: 'Compare-and-swap',
-    title: 'The store only has to do one smart thing.',
-    body: 'Refuse a write if the file changed since you read it. Lose the race on the manifest and the whole cycle starts over with exponential backoff, 300 ms up to 8 s, re-reading what the other device wrote. Lose it on a single object and that sync stops; the next one pulls the other write and settles it.',
+    k: 'Taking turns',
+    title: 'Two devices never overwrite each other.',
+    body: 'The storage accepts a save only if nothing changed since that device last looked. If your laptop and phone save at the same moment, one goes through; the other reads the newer version first and tries again.',
+    tech: 'Compare-and-swap writes. A lost race on the manifest retries with backoff from 300 ms to 8 s.',
   },
   {
-    k: 'Resolve',
-    title: 'Conflicts settle the same way everywhere.',
-    body: 'Higher revision wins. On a tie, the higher device id. Never the wall clock, which devices disagree on and anyone can fake. Two devices looking at the same pair pick the same winner without talking. Deletes are tombstones, kept forever, so nothing comes back.',
+    k: 'Same answer',
+    title: 'Every device settles a clash the same way.',
+    body: 'If two edits really do clash, the newer one wins, and on a tie a fixed rule picks. No clocks are involved, so every device reaches the same answer without asking the others. Deleted notes stay deleted.',
+    tech: 'Higher revision wins, then the higher device id. Deletes are kept as tombstones.',
   },
 ]
 
@@ -62,15 +69,21 @@ export function SldtProtocol() {
           <p className="label" id="proto-h">
             <b>III.1–5</b>How it works
           </p>
+          <p className="proto-lede">In plain words: your devices share a locked notebook through storage that can’t open it.</p>
           <ol className="proto-steps">
             {STEPS.map((s, i) => (
               <li key={s.k} className={i === step ? 'active' : i < step ? 'done' : ''}>
                 <span className="proto-n">{i + 1}</span>
                 <div>
                   <h3>
-                    {s.title} <span className="proto-k">{s.k}</span>
+                    {s.title}
                   </h3>
-                  <p className="proto-body">{s.body}</p>
+                  <div className="proto-more">
+                    <p className="proto-body">{s.body}</p>
+                    <p className="proto-tech">
+                      <span className="label">Under the hood</span> {s.tech}
+                    </p>
+                  </div>
                 </div>
               </li>
             ))}
@@ -93,8 +106,8 @@ export function SldtProtocol() {
           <g className={`g-id ${on(0)}`}>
             <rect x="270" y="20" width="260" height="96" rx="6" />
             <text x="400" y="52" className="t-mono t-center">SLDT:datasetId:secret</text>
-            <text x="400" y="74" className="t-small t-center">Argon2id, 64 MiB, 3 passes</text>
-            <text x="400" y="96" className="t-small t-center t-acc">64 bytes, split in two</text>
+            <text x="400" y="74" className="t-small t-center">your recovery code, made slow to guess</text>
+            <text x="400" y="96" className="t-small t-center t-acc">split into two keys</text>
             <use href="#p-id-a" className="flow" />
             <use href="#p-id-b" className="flow" />
             {!state.reduced && step === 0 ? (
@@ -129,11 +142,11 @@ export function SldtProtocol() {
               <g className={`keys ${on(0)}`}>
                 <rect x={d.x + 16} y="248" width="64" height="22" rx="11" />
                 <text x={d.x + 48} y="263" className="t-small t-center">
-                  AES key
+                  lock key
                 </text>
                 <rect x={d.x + 88} y="248" width="66" height="22" rx="11" />
                 <text x={d.x + 121} y="263" className="t-small t-center">
-                  HMAC key
+                  sign key
                 </text>
               </g>
               <text x={d.x + 16} y="306" className="t-small">
@@ -149,7 +162,7 @@ export function SldtProtocol() {
               The store
             </text>
             <text x="504" y="404" className="t-small t-end">
-              public, and dumb
+              can’t read
             </text>
             <g className={`cipher ${on(1, 2, 3, 4)}`}>
               <text x="296" y="430" className="t-mono t-dim">
@@ -164,7 +177,7 @@ export function SldtProtocol() {
                 <g key={i}>
                   <rect x={296 + i * 74} y="466" width="62" height="46" rx="4" />
                   <text x={327 + i * 74} y="485" className="t-small t-center">
-                    r{3 + i}
+                    v{3 + i}
                   </text>
                   <text x={327 + i * 74} y="502" className="t-small t-center t-acc">
                     signed
@@ -206,10 +219,10 @@ export function SldtProtocol() {
             <use href="#p-b-store" className="flow" />
             <use href="#p-retry" className="flow retry" />
             <text x="190" y="440" className="t-mono t-acc">
-              200, written
+              saved
             </text>
             <text x="560" y="452" className="t-mono t-red">
-              409, retry in 300 ms
+              busy, tries again
             </text>
             {!state.reduced && step === 3 ? (
               <>
@@ -231,14 +244,14 @@ export function SldtProtocol() {
           <g className={`g-res ${on(4)}`}>
             <rect x="250" y="150" width="130" height="34" rx="17" className="tag lose" />
             <text x="315" y="172" className="t-mono t-center">
-              r4, a3f9
+              v4 · laptop
             </text>
             <rect x="420" y="150" width="130" height="34" rx="17" className="tag win" />
             <text x="485" y="172" className="t-mono t-center">
-              r4, c71e ✓
+              v4 · phone ✓
             </text>
             <text x="400" y="210" className="t-small t-center">
-              Same revision, so the higher device id wins, on both devices.
+              Same version, so a fixed rule picks. Both devices agree.
             </text>
           </g>
         </svg>

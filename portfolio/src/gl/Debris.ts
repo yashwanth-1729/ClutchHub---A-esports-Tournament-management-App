@@ -363,12 +363,19 @@ export class Debris {
   resize() {
     // the canvas box (100lvh) can be taller than innerHeight on phones; draw to the box
     const el = this.renderer.domElement
-    const w = (this.vw = el.clientWidth || window.innerWidth)
-    const h = (this.vh = el.clientHeight || window.innerHeight)
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, state.touch ? 1.5 : 1.75))
+    const w = el.clientWidth || window.innerWidth
+    const h = el.clientHeight || window.innerHeight
+    const ratio = Math.min(window.devicePixelRatio || 1, state.touch ? 1.5 : 1.75)
+    // setSize wipes the canvas even at the same size, so only touch it when something changed
+    if (w === this.vw && h === this.vh && ratio === this.renderer.getPixelRatio()) return
+    this.vw = w
+    this.vh = h
+    this.renderer.setPixelRatio(ratio)
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
+    // refill the wiped canvas now rather than on the next frame
+    this.renderer.render(this.scene, this.camera)
   }
 
   update(dt: number, accent: [number, number, number]) {
