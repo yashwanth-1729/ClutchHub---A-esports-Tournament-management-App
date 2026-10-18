@@ -9,6 +9,7 @@ if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split("."
   sudo apt-get install -y nodejs
 fi
 command -v nginx >/dev/null || sudo apt-get install -y nginx
+command -v rsync >/dev/null || sudo apt-get install -y rsync
 
 npm ci
 npm run build

@@ -53,7 +53,7 @@ export const projects: Project[] = [
     stack: ['Next.js', 'FastAPI', 'Tauri v2', 'Three.js', 'Kotlin'],
     source: 'https://github.com/yashwanth-1729/Jarvis-V2',
     live: '',
-    figure: 'The mascot, redrawn for this page. It watches your cursor and greets you in English, Telugu or Hinglish, out loud if your sound is on, in the same voices the app uses. Hold “lock in” and the rest of the page commits with it.',
+    figure: 'The mascot, redrawn for this page. It watches your cursor and greets you in English, Telugu or Hinglish, out loud, from somewhere inside the hole. Hold “lock in” and the rest of the page commits with it.',
   },
   {
     id: 'hospital',

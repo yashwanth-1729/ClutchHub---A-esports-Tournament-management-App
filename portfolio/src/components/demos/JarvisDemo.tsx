@@ -12,9 +12,9 @@ const LINES: Record<Lang, { label: string; text: string; lang: string }> = {
 }
 const LOCK_LINE = 'Locked in. I’ll keep everything else quiet until you’re done.'
 const HOLD_MS = 1100
-// The clips in public/voice/ are the app's own voices, made the way the app
-// makes them: Kokoro "af_sky" for English, Grok Voice "eve" for Telugu and
-// Hindi, both through OpenRouter at the app's pace of 1.15.
+// The clips in public/voice/ are Gemini TTS voice "Alnilam" (via OpenRouter),
+// cast for this page by a listening panel, then placed in the same space as
+// the drone: a reverb built from the impulse VoidAudio uses.
 const HAS_VOICE = true
 const CLIPS = ['en', 'te', 'hi', 'lock']
 
