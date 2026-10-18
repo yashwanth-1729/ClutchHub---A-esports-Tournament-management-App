@@ -25,7 +25,7 @@ Any static host works. On Vercel, import the repository and keep the detected Vi
 
 - Copy, projects, links and the index all live in `src/content.ts`. Empty links (Instagram, LinkedIn, website) stay hidden until they are filled in.
 - Camera framing per section lives in `FRAMES` in `src/engine/engine.ts`.
-- The JARVIS figure's voice clips in `public/voice/` are Gemini TTS voice "Alnilam" through OpenRouter, chosen against a "voice from the void" brief by a three-model listening panel. They are trimmed, given a reverb built from the same decaying-noise impulse as the drone (wet 12 LU under dry, 25 ms pre-delay), and levelled to -18 LUFS. The drone ducks while they play. Set `HAS_VOICE` to `false` in `src/components/demos/JarvisDemo.tsx` for text only.
+- The JARVIS figure's voice clips in `public/voice/` are Gemini TTS voice "Alnilam" through OpenRouter, chosen against a "voice from the void" brief by a three-model listening panel. Long pauses are capped at a quarter second and the pace raised 1.12x (pitch kept), then they are given a reverb built from the same decaying-noise impulse as the drone (wet 12 LU under dry, 25 ms pre-delay), and levelled to -18 LUFS. The drone ducks while they play. Set `HAS_VOICE` to `false` in `src/components/demos/JarvisDemo.tsx` for text only.
 
 ## Accessibility
 
