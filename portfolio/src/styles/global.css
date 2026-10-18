@@ -290,8 +290,19 @@ button {
   font-size: var(--fs-mega);
   line-height: 0.82;
   letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.loader-count .dg,
+.loader-count .dot {
+  display: inline-block;
+  text-align: center;
+}
+/* the widest figure (0) at this weight and width, measured from the font */
+.loader-count .dg {
+  width: 0.74em;
+}
+.loader-count .dot {
+  width: 0.2em;
 }
 .loader-unit {
   font-family: var(--mono);
@@ -334,24 +345,23 @@ button {
   align-self: end;
   justify-self: end;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 14px;
   width: min(24rem, 100%);
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.9s var(--ease) 0.2s, transform 0.9s var(--ease) 0.2s;
 }
-.loader-enter > .label {
-  grid-column: 1 / -1;
-  margin-bottom: 10px;
-  color: var(--pencil);
-}
 .is-counted .loader-enter {
   opacity: 1;
   transform: none;
 }
+.loader.is-counted {
+  cursor: pointer;
+}
 .enter-btn {
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   padding: 14px 0 0;
   text-align: left;
   font-family: var(--display);
@@ -384,11 +394,18 @@ button {
 .enter-btn:focus-visible::before {
   transform: none;
 }
+.enter-arrow {
+  font-family: var(--text);
+  transition: transform 0.6s var(--ease);
+}
+.enter-btn:hover .enter-arrow,
+.enter-btn:focus-visible .enter-arrow {
+  transform: translateX(6px);
+}
 .enter-btn:focus-visible {
   outline: none;
 }
 .loader-note {
-  grid-column: 1 / -1;
   margin: 14px 0 0;
   font-size: var(--fs-small);
   color: var(--fg-3);

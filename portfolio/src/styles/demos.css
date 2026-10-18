@@ -220,7 +220,6 @@
   font-size: var(--fs-lede);
   font-weight: 500;
   letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
 }
 .hs-s {
   font-family: var(--mono);
@@ -259,7 +258,7 @@
 .ch-table {
   border-top: 1.5px solid var(--fg);
   border-bottom: 1.5px solid var(--fg);
-  font-variant-numeric: tabular-nums;
+  /* no tnum: this family's tabular zero is slashed; the columns are right-aligned anyway */
 }
 .ch-row {
   display: grid;
