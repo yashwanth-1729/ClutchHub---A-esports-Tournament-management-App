@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { audio } from '../../audio/VoidAudio'
 import { signals } from '../../engine/signals'
 import { state } from '../../engine/engine'
-import { useFrame, useInView } from '../../lib/hooks'
+import { useFrame, useInView, usePhone } from '../../lib/hooks'
 
 // Real AES-256-GCM and HMAC-SHA256 through the Web Crypto API, the same
 // primitives SLDT uses. Keys are generated fresh in your tab and never leave it.
@@ -65,7 +65,8 @@ export function SldtDemo() {
   const [tampered, setTampered] = useState(false)
   const lens = useRef<HTMLDivElement>(null)
   const inView = useInView(lens)
-  const pointer = useRef({ inside: false, x: 0, y: 0, t: 0 })
+  const pointer = useRef({ inside: false, x: 0, y: 0, t: 0, rest: 0, lx: -1, ly: -1 })
+  const phone = usePhone()
 
   const supported = typeof crypto !== 'undefined' && !!crypto.subtle
 
@@ -151,10 +152,20 @@ export function SldtDemo() {
     p.t += dt
     let x = p.x
     let y = p.y
-    if (!p.inside) {
+    // a lifted finger leaves the lens where it was for a while before it wanders off
+    if (p.rest > 0) p.rest -= dt
+    if (!p.inside && p.rest <= 0) {
       const t = state.reduced ? 0 : p.t
       x = el.clientWidth * (0.5 + (state.reduced ? 0 : 0.34 * Math.sin(t * 0.6)))
       y = el.clientHeight * (0.5 + (state.reduced ? 0 : 0.3 * Math.sin(t * 0.83 + 1)))
+    }
+    if (state.touch) {
+      // a tap jumps a long way, so on touch screens the lens glides there
+      const k = state.reduced || p.lx < 0 ? 1 : 1 - Math.exp(-dt * 14)
+      p.lx += (x - p.lx) * k
+      p.ly += (y - p.ly) * k
+      x = p.lx
+      y = p.ly
     }
     el.style.setProperty('--lx', `${x}px`)
     el.style.setProperty('--ly', `${y}px`)
@@ -176,8 +187,9 @@ export function SldtDemo() {
           move(e)
         }}
         onPointerMove={move}
-        onPointerLeave={() => {
+        onPointerLeave={(e) => {
           pointer.current.inside = false
+          if (e.pointerType !== 'mouse') pointer.current.rest = 2.5
         }}
         data-cursor="decrypting"
         role="group"
@@ -205,22 +217,40 @@ export function SldtDemo() {
         <dt>The store sees</dt>
         <dd>ciphertext and a signed manifest; no plaintext, no keys</dd>
       </dl>
-      <p className="sl-actions">
-        {supported ? (
-          <>
-            <button className="act" onClick={tamper}>
-              Flip one bit
-            </button>{' '}
-            of the ciphertext, or{' '}
-            <button className="act" onClick={reseal}>
-              {tampered ? 'restore and seal it again' : 'seal it again'}
-            </button>{' '}
-            with a fresh IV.
-          </>
-        ) : (
-          'This browser does not expose the Web Crypto API here.'
-        )}
-      </p>
+      {phone && supported ? (
+        // On a phone each action is its own full-width row, sized for a thumb.
+        <div className="ph-acts">
+          <button className="ph-act" onClick={tamper}>
+            <span className="act">Flip one bit</span>
+            <span className="ph-k" aria-hidden="true">
+              of the ciphertext
+            </span>
+          </button>
+          <button className="ph-act" onClick={reseal}>
+            <span className="act">{tampered ? 'Restore and seal it again' : 'Seal it again'}</span>
+            <span className="ph-k" aria-hidden="true">
+              fresh IV
+            </span>
+          </button>
+        </div>
+      ) : (
+        <p className="sl-actions">
+          {supported ? (
+            <>
+              <button className="act" onClick={tamper}>
+                Flip one bit
+              </button>{' '}
+              of the ciphertext, or{' '}
+              <button className="act" onClick={reseal}>
+                {tampered ? 'restore and seal it again' : 'seal it again'}
+              </button>{' '}
+              with a fresh IV.
+            </>
+          ) : (
+            'This browser does not expose the Web Crypto API here.'
+          )}
+        </p>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { audio } from '../../audio/VoidAudio'
 import { state } from '../../engine/engine'
 import { signals } from '../../engine/signals'
-import { useFrame, useInView } from '../../lib/hooks'
+import { useFrame, useInView, usePhone } from '../../lib/hooks'
 
 type Lang = 'en' | 'te' | 'hi'
 const LINES: Record<Lang, { label: string; text: string; lang: string }> = {
@@ -23,6 +23,9 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
   const wrap = useRef<HTMLDivElement>(null)
   const inView = useInView(wrap)
   const s = useRef({ t: 0, blink: 0, nextBlink: 2, lookX: 0, lookY: 0, open: 1, talk: 0, ring: 0 })
+  // On a touch screen there is no cursor between touches, so it looks at the last
+  // place a finger came down or moved, and straight ahead until the first touch.
+  const touchAt = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(
     () => () => {
@@ -30,6 +33,19 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
     },
     [],
   )
+
+  useEffect(() => {
+    if (!state.touch) return
+    const on = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') touchAt.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener('pointerdown', on, { passive: true })
+    window.addEventListener('pointermove', on, { passive: true })
+    return () => {
+      window.removeEventListener('pointerdown', on)
+      window.removeEventListener('pointermove', on)
+    }
+  }, [])
 
   useFrame((dt) => {
     // the voice signal feeds the debris even when the mascot is off screen
@@ -53,12 +69,13 @@ function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
     const tt = state.reduced ? 0 : st.t
     if (!state.reduced) st.ring += dt * (0.25 + state.lock * 1.4)
 
-    // look toward the cursor
+    // look toward the cursor (or the last touch)
     const rect = c.getBoundingClientRect()
-    const dx = state.mouse.x - (rect.left + W / 2)
-    const dy = state.mouse.y - (rect.top + H / 2)
+    const at = state.touch ? touchAt.current : state.mouse
+    const dx = at ? at.x - (rect.left + W / 2) : 0
+    const dy = at ? at.y - (rect.top + H / 2) : 0
     const d = Math.hypot(dx, dy) || 1
-    const reach = Math.min(1, d / 400)
+    const reach = at ? Math.min(1, d / 400) : 0
     st.lookX += ((dx / d) * 9 * reach - st.lookX) * 0.12
     st.lookY += ((dy / d) * 6 * reach - st.lookY) * 0.12
 
@@ -283,6 +300,7 @@ export function JarvisDemo() {
   const voiceEl = useRef<HTMLAudioElement | null>(null)
   const clips = useRef(new Map<string, HTMLAudioElement>())
   const [soundOn, setSoundOn] = useState(audio.enabled)
+  const phone = usePhone()
 
   // one element per clip, made on first need and reused, so a replay is instant
   const clip = (file: string) => {
@@ -397,6 +415,49 @@ export function JarvisDemo() {
     else if (e.detail === 0) lockIn()
   }
 
+  const holdProps = {
+    style: { ['--p' as string]: hold },
+    onPointerDown: () => {
+      justHeld.current = false
+      startHold()
+    },
+    onPointerUp: endHold,
+    onPointerLeave: endHold,
+    onClick: click,
+    'data-cursor': locked ? 'let go' : 'keep holding',
+  }
+  const holdWords = state.touch ? 'touch and hold to lock in' : 'press and hold to lock in'
+  const langs = Object.keys(LINES) as Lang[]
+
+  // On a phone: the three languages as a row of keys, and the hold as a full-width
+  // bar whose red line fills while a thumb stays on it.
+  const phoneControls = (
+    <div className="jv-pad">
+      <p className="label" id="jv-greet">
+        Greet me in
+      </p>
+      <div className="jv-langs" role="group" aria-labelledby="jv-greet">
+        {langs.map((l) => (
+          <button key={l} className="jv-lang" aria-pressed={lang === l} onClick={() => pick(l)} lang={LINES[l].lang}>
+            {LINES[l].label}
+          </button>
+        ))}
+      </div>
+      <button
+        className="ph-act jv-hold"
+        {...holdProps}
+        onPointerCancel={endHold}
+        // a long press would otherwise open the browser's menu
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <span className="act">{locked ? 'Release the lock' : `${holdWords.charAt(0).toUpperCase()}${holdWords.slice(1)}`}</span>
+        <span className="ph-k" aria-hidden="true">
+          {hold > 0 && !locked ? 'keep holding' : ''}
+        </span>
+      </button>
+    </div>
+  )
+
   return (
     <div className="jv">
       <div
@@ -414,33 +475,26 @@ export function JarvisDemo() {
         </p>
         <p className="jv-state">{locked ? 'locked in' : talking ? (soundOn ? 'speaking' : 'sound off') : hovered ? 'listening' : 'idle'}</p>
       </div>
-      <p className="jv-controls">
-        Greet me in{' '}
-        {(Object.keys(LINES) as Lang[]).map((l, i, all) => (
-          <span key={l}>
-            <button className="act" aria-pressed={lang === l} onClick={() => pick(l)} lang={LINES[l].lang}>
-              {LINES[l].label}
-            </button>
-            {i < all.length - 2 ? ', ' : i === all.length - 2 ? ' or ' : ''}
-          </span>
-        ))}
-        . Or{' '}
-        <button
-          className="act jv-hold"
-          style={{ ['--p' as string]: hold }}
-          onPointerDown={() => {
-            justHeld.current = false
-            startHold()
-          }}
-          onPointerUp={endHold}
-          onPointerLeave={endHold}
-          onClick={click}
-          data-cursor={locked ? 'let go' : 'keep holding'}
-        >
-          {locked ? 'release the lock' : 'press and hold to lock in'}
-        </button>
-        .
-      </p>
+      {phone ? (
+        phoneControls
+      ) : (
+        <p className="jv-controls">
+          Greet me in{' '}
+          {langs.map((l, i, all) => (
+            <span key={l}>
+              <button className="act" aria-pressed={lang === l} onClick={() => pick(l)} lang={LINES[l].lang}>
+                {LINES[l].label}
+              </button>
+              {i < all.length - 2 ? ', ' : i === all.length - 2 ? ' or ' : ''}
+            </span>
+          ))}
+          . Or{' '}
+          <button className="act jv-hold" {...holdProps}>
+            {locked ? 'release the lock' : holdWords}
+          </button>
+          .
+        </p>
+      )}
       <Stream />
     </div>
   )

@@ -1,0 +1,153 @@
+/* ---------- the phone: projects (chapter II) ----------
+   One column, read top to bottom: a slot of open sky where the debris floats,
+   the name, the working model on its own dark plate, then the story, with the
+   build notes folded under "How it's built". Desktop is untouched. */
+
+@media (max-width: 700px) {
+  /* the opener sits low, under the hole, with its lede close beneath */
+  .work-intro {
+    align-content: end;
+    gap: 24px;
+    padding-top: 24svh;
+    /* clear of the bottom bar */
+    padding-bottom: calc(var(--bar-bottom) + 4svh);
+  }
+
+  .project {
+    min-height: 0;
+    display: block;
+    padding-top: 2svh;
+    padding-bottom: 14svh;
+  }
+  .project-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .project .project-artifact,
+  .project.flip .project-artifact {
+    flex: none;
+    min-height: 0;
+    height: 24svh;
+  }
+  .project .project-copy,
+  .project.flip .project-copy {
+    gap: 12px;
+  }
+  .project .kicker {
+    margin: 0;
+  }
+
+  /* Over the disk a radial pool leaves the ends of each line in the light, so on a
+     phone the sky is dimmed edge to edge behind the words. The dimming runs on under
+     the plate (by more than the plate drifts), so no sliver of disk shows between them,
+     and fades out only toward the open sky above the name and below the story. */
+  .project-copy.backed::before {
+    inset: -48px calc(var(--gutter) * -1) -76px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.66) 48px);
+  }
+  .project-read.backed::before {
+    inset: -76px calc(var(--gutter) * -1) -56px;
+    background: linear-gradient(rgb(0 0 0 / 0.78) calc(100% - 56px), transparent);
+  }
+
+  /* the figure becomes a plate, edge to edge, with its caption printed on it */
+  .project-stage {
+    margin: 44px calc(var(--gutter) * -1) 0;
+    padding: 0 var(--gutter) 18px;
+    background: rgb(4 4 4 / 0.84);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .project .figure {
+    padding: 20px 0 22px;
+    background: none;
+    border-top: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .project-stage figcaption {
+    max-width: none;
+    margin-top: 14px;
+  }
+
+  .project-read {
+    margin-top: 44px;
+    display: grid;
+    gap: 28px;
+  }
+
+  /* ---------- "How it's built" ---------- */
+  .built {
+    border-bottom: 1px solid var(--rule);
+  }
+  .built-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    min-height: var(--tap);
+    padding: 14px 0;
+    text-align: left;
+    border-top: 1px solid var(--rule);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .built-head {
+    display: grid;
+    gap: 4px;
+  }
+  .built-peek {
+    font-size: var(--fs-small);
+    line-height: 1.45;
+    color: var(--fg-3);
+  }
+  .built-toggle[aria-expanded='true'] .label {
+    color: var(--fg);
+  }
+  .built-toggle:active .label {
+    color: var(--pencil);
+  }
+  /* a plus drawn with two hairlines; the upright one turns flat into a minus */
+  .built-sign {
+    position: relative;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+  }
+  .built-sign::before,
+  .built-sign::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1.5px;
+    margin-top: -0.75px;
+    background: var(--pencil);
+    transition: transform 0.5s var(--ease);
+  }
+  .built-sign::after {
+    transform: rotate(90deg);
+  }
+  .built-toggle[aria-expanded='true'] .built-sign::after {
+    transform: rotate(0deg);
+  }
+  .built-panel:not([hidden]) {
+    display: flow-root;
+  }
+  .built-panel .prose {
+    padding-top: 6px;
+  }
+  .built-panel .sidenote {
+    margin: 4px 0 20px;
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .built-sign::before,
+  .built-sign::after {
+    transition: none;
+  }
+}

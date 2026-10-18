@@ -1,0 +1,329 @@
+/* ---------- the phone: the photon sphere (IV) and the horizon (V) ----------
+   IV loses the ring of skills (it needs a wide screen to orbit) and keeps its
+   heading, a stretch of open sky for the real photon ring, and the index set
+   as a book sets one. V stacks the message field over its button and turns the
+   sentence of links into rows a thumb can hit. Desktop is untouched. */
+
+@media (max-width: 700px) {
+  /* ---------- IV. the photon sphere ---------- */
+
+  .orbit-stage {
+    display: block;
+    min-height: 0;
+    padding-top: calc(var(--bar-top) + 4svh);
+    /* room for the index's shade to fade out before the stage clips it */
+    padding-bottom: 72px;
+  }
+  .orbit-head {
+    gap: 16px;
+  }
+  .orbit-head h2 {
+    font-size: var(--fs-title);
+  }
+
+  .pindex {
+    position: relative;
+    /* open sky between the heading and the index, where the photon ring shows */
+    margin-top: 30svh;
+    padding: 0 var(--gutter);
+  }
+  /* the index is read over the disk: a band of shade, edge to edge, feathered at both ends */
+  .pindex::before {
+    content: '';
+    position: absolute;
+    inset: -64px 0;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.84) 64px, rgb(0 0 0 / 0.84) calc(100% - 64px), transparent);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .pindex-head {
+    display: grid;
+    gap: 6px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .pindex-title {
+    color: var(--fg-2);
+  }
+  .pindex-note {
+    margin: 0;
+    font-size: var(--fs-small);
+    line-height: 1.45;
+    color: var(--fg-3);
+  }
+  .pindex-list {
+    list-style: none;
+    margin: 0;
+    padding: 6px 0 0;
+  }
+
+  /* letter | term and its leader | references. A long term wraps, and the
+     leader and references then sit on its last line. */
+  .pi-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: baseline;
+    align-items: last baseline;
+    align-content: center;
+    min-height: var(--tap);
+    /* keeps one line's rhythm when a term takes two */
+    padding-block: 11px;
+  }
+  .pi-row.is-head:not(:first-child) {
+    margin-top: 4px;
+  }
+  .pi-letter {
+    font-family: var(--mono);
+    font-size: var(--fs-label);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    color: var(--pencil);
+  }
+  .pi-term {
+    position: relative;
+    margin-right: 12px;
+    /* the leader runs on past the term and is cut where the references begin */
+    overflow: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
+    font-size: var(--fs-body);
+    line-height: 1.3;
+    color: var(--fg);
+    text-shadow: none;
+  }
+  /* real full stops, set from wherever the term's last line ends, as a book sets them.
+     Out of flow, so the dots never decide where a term wraps. */
+  .pi-term::after {
+    content: '. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .';
+    position: absolute;
+    margin-left: 0.6em;
+    white-space: pre;
+    letter-spacing: 0.12em;
+    color: var(--fg-3);
+    pointer-events: none;
+  }
+  .pi-refs {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    white-space: nowrap;
+  }
+  /* set at their own width, evenly spaced; each one's hit area is a full thumb
+     (the gap between references is wide enough that neighbours never overlap) */
+  .pi-ref {
+    position: relative;
+    font-family: var(--mono);
+    font-size: var(--fs-data);
+    letter-spacing: 0.04em;
+    color: var(--fg-2);
+    text-decoration: underline;
+    text-decoration-color: var(--fg-3);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pi-ref::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, var(--tap));
+    height: var(--tap);
+    transform: translate(-50%, -50%);
+  }
+  .pi-ref.is-plain::after {
+    content: none;
+  }
+  .pi-ref:active {
+    color: var(--pencil);
+    text-decoration-color: var(--pencil);
+  }
+  .pi-ref:focus-visible {
+    outline-offset: 4px;
+  }
+  /* passim: everywhere, so nowhere to go */
+  .pi-ref.is-plain {
+    color: var(--fg-3);
+    text-decoration: none;
+  }
+  .pi-sep {
+    margin-right: 13px;
+    font-family: var(--mono);
+    font-size: var(--fs-data);
+    color: var(--fg-3);
+  }
+
+  /* ---------- V. the horizon ---------- */
+
+  .contact {
+    gap: 26px;
+    padding-top: 16vh;
+    /* the last line ends above the bottom bar and its fade, never under them */
+    padding-bottom: calc(var(--bar-bottom) + var(--gutter) + 20px);
+  }
+
+  .contact-body {
+    position: relative;
+    width: 100%;
+    display: grid;
+    gap: 22px;
+  }
+  /* the form and the rows sit where the disk crosses the screen: shade behind them, edge to edge */
+  .contact-body::before {
+    content: '';
+    position: absolute;
+    inset: -56px -50vw;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.8) 56px, rgb(0 0 0 / 0.8) calc(100% - 56px), transparent);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* the field over its button, both the full width */
+  .contact-body .void-form {
+    width: 100%;
+    display: grid;
+    gap: 0;
+    border-bottom: 0;
+  }
+  .void-form textarea {
+    display: block;
+    width: 100%;
+    min-height: 52px;
+    margin: 0;
+    padding: 12px 2px;
+    resize: none;
+    overflow: hidden;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid rgb(var(--ink) / 0.45);
+    border-radius: 0;
+    outline: none;
+    color: var(--fg);
+    font-family: var(--text);
+    /* 20px on a phone: large enough that iOS leaves the zoom alone */
+    font-size: var(--fs-lede);
+    font-weight: 340;
+    line-height: 1.35;
+    text-align: left;
+    transition: border-color 0.3s;
+  }
+  .void-form textarea:focus {
+    border-bottom-color: var(--pencil);
+  }
+  .void-form textarea::placeholder {
+    color: var(--fg-3);
+    opacity: 1;
+  }
+  /* the site's button: display capitals, the action on the left, the arrow on the right */
+  .void-form .void-send {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 52px;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .void-arrow {
+    font-family: var(--text);
+    font-size: var(--fs-body);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .void-form .void-send:active {
+    color: var(--pencil);
+  }
+
+  /* under the title, the page reads as one column with a straight left edge */
+  .void-status {
+    min-height: 0;
+    max-width: none;
+    text-align: left;
+    text-wrap: pretty;
+  }
+  /* the two fallbacks in the status line get a thumb's height without moving the lines */
+  .void-status .act {
+    padding-block: 12px;
+    margin-block: -12px;
+  }
+
+  /* other ways to reach me: one row each, the name on the left, what a tap does on the right */
+  .elsewhere {
+    display: grid;
+    gap: 10px;
+    margin-top: 6px;
+    text-align: left;
+  }
+  .elsewhere-title {
+    color: var(--fg-3);
+  }
+  .crows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .crows li {
+    border-bottom: 1px solid var(--rule);
+  }
+  .crow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    column-gap: 16px;
+    width: 100%;
+    min-height: 52px;
+    padding: 13px 0;
+    text-align: left;
+    text-decoration: none;
+    color: var(--fg);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .crow-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--fs-body);
+    line-height: 1.6;
+  }
+  .crow-does {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--fg-3);
+    transition: color 0.3s;
+  }
+  .crow:active .crow-name,
+  .crow:active .crow-does {
+    color: var(--pencil);
+  }
+  .crow:focus-visible {
+    outline-offset: -1px;
+  }
+
+  .elapsed-note {
+    justify-self: stretch;
+    margin-top: 4px;
+    text-align: left;
+  }
+
+  .colophon {
+    margin-top: 4vh;
+  }
+  .colophon .act {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .void-form textarea,
+  .crow-does {
+    transition: none;
+  }
+}

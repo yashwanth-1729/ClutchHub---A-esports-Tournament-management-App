@@ -24,3 +24,18 @@ export function useFrame(fn: (dt: number) => void) {
 export function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
+
+/** The phone layout: one column, a bottom bar, sections rebuilt for a thumb. CSS uses the same query. */
+export const PHONE_QUERY = '(max-width: 700px)'
+
+export function usePhone() {
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && matchMedia(PHONE_QUERY).matches)
+  useEffect(() => {
+    const mq = matchMedia(PHONE_QUERY)
+    const on = () => setPhone(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return phone
+}

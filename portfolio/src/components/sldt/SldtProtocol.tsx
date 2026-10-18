@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { audio } from '../../audio/VoidAudio'
 import { state } from '../../engine/engine'
+import { usePhone } from '../../lib/hooks'
+import { ProtoDiagramPhone } from './ProtoDiagramPhone'
 
 // Each step leads with plain words; the exact mechanism sits in a small
 // "under the hood" line for anyone who wants it.
@@ -40,6 +42,7 @@ const STEPS = [
 
 export function SldtProtocol() {
   const section = useRef<HTMLElement>(null)
+  const phone = usePhone()
   const [step, setStep] = useState(0)
   const last = useRef(0)
 
@@ -66,10 +69,23 @@ export function SldtProtocol() {
     <section className="proto" data-frame="protocol" ref={section} aria-labelledby="proto-h">
       <div className="proto-stage wrap">
         <div className="proto-copy backed">
-          <p className="label" id="proto-h">
-            <b>III.1–5</b>How it works
-          </p>
+          {phone ? (
+            <div className="proto-head">
+              <p className="label" id="proto-h">
+                <b>III.1–5</b>How it works
+              </p>
+              {/* every step stays in the accessibility tree, so the count is for the eye only */}
+              <p className="proto-count mono" aria-hidden="true">
+                <span>{step + 1}</span> / {STEPS.length}
+              </p>
+            </div>
+          ) : (
+            <p className="label" id="proto-h">
+              <b>III.1–5</b>How it works
+            </p>
+          )}
           <p className="proto-lede">In plain words: your devices share a locked notebook through storage that can’t open it.</p>
+          {phone ? <ProtoDiagramPhone step={step} label={`Diagram, step ${step + 1}: ${STEPS[step].k}`} /> : null}
           <ol className="proto-steps">
             {STEPS.map((s, i) => (
               <li key={s.k} className={i === step ? 'active' : i < step ? 'done' : ''}>

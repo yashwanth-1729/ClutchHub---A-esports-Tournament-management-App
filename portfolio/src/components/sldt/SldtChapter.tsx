@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { state } from '../../engine/engine'
 import { Chars } from '../../lib/Chars'
+import { usePhone } from '../../lib/hooks'
 import { Scribble } from '../Scribble'
 import { SldtProtocol } from './SldtProtocol'
 import { SldtLab } from './SldtLab'
@@ -16,6 +17,9 @@ const FOUND = [
 export function SldtChapter() {
   const intro = useRef<HTMLElement>(null)
   const notes = useRef<HTMLElement>(null)
+  // small copy differences on a phone: the lab there has its own Laptop / Phone / Store tabs,
+  // so "this tab" would be ambiguous, and the lede needs one word kept with its neighbour
+  const phone = usePhone()
 
   useEffect(() => {
     if (state.reduced) return
@@ -66,7 +70,8 @@ export function SldtChapter() {
         <div className="thesis-cols backed">
           <p className="lede">
             Most sync needs a database and a server you have to trust. SLDT needs neither. Any storage that can serve bytes by path and refuse a stale write becomes a sync
-            backend{' '}
+            {/* on a narrow phone "backend" would be left alone on a line above the underlined phrase */}
+            {phone ? ' ' : ' '}backend{' '}
             <span className="marked">
               without ever knowing it is one
               <Scribble kind="underline" style={{ left: 0, right: 0, bottom: '-0.25em', height: '0.5em', width: '100%' }} delay={0.6} />
@@ -100,7 +105,7 @@ export function SldtChapter() {
           <figcaption>
             <b>Fig. 5.</b>
             A miniature of SLDT: the same Argon2id identity, padded AES-256-GCM envelopes, HMAC-signed and hash-chained manifest, compare-and-swap writes and conflict rule
-            as the real engine. Only the store is pretend; it lives in this tab’s memory instead of a GitHub repository.
+            as the real engine. Only the store is pretend; it lives in this {phone ? 'page’s' : 'tab’s'} memory instead of a GitHub repository.
           </figcaption>
         </figure>
       </section>

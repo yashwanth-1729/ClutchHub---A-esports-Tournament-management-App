@@ -11,6 +11,9 @@ import 'lenis/dist/lenis.css'
 import './styles/global.css'
 import './styles/demos.css'
 import './styles/sldt.css'
+import './styles/phone-chrome.css'
+import './styles/phone-work.css'
+import './styles/phone-end.css'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(<App />)

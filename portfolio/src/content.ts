@@ -35,6 +35,8 @@ export type Project = {
   live: string
   original?: boolean
   figure: string
+  /** The caption on touch screens, where there is no cursor to point with. */
+  figureTouch?: string
 }
 
 export const projects: Project[] = [
@@ -54,6 +56,7 @@ export const projects: Project[] = [
     source: 'https://github.com/yashwanth-1729/Jarvis-V2',
     live: '',
     figure: 'The mascot, redrawn for this page. It watches your cursor and greets you in English, Telugu or Hinglish, out loud, from somewhere inside the hole. Hold “lock in” and the rest of the page commits with it.',
+    figureTouch: 'The mascot, redrawn for this page. It looks wherever you last touched the screen and greets you in English, Telugu or Hinglish, out loud, from somewhere inside the hole. Touch and hold “lock in” and the rest of the page commits with it.',
   },
   {
     id: 'hospital',
@@ -102,6 +105,7 @@ export const projects: Project[] = [
     live: '',
     original: true,
     figure: 'What the store holds, and what your key reads. The ciphertext is real AES-256-GCM, made in your browser a moment ago. Drag the lens across it.',
+    figureTouch: 'What the store holds, and what your key reads. The ciphertext is real AES-256-GCM, made in your browser a moment ago. Tap it, or drag your finger across it, to move the lens.',
   },
 ]
 

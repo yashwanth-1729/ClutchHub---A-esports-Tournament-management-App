@@ -1,7 +1,7 @@
-import { useRef } from 'react'
+import { Fragment, useRef } from 'react'
 import { bookIndex, refTarget } from '../content'
 import { focusTarget, scrollToTarget, state } from '../engine/engine'
-import { useFrame, useInView } from '../lib/hooks'
+import { useFrame, useInView, usePhone } from '../lib/hooks'
 
 const ITEMS = bookIndex.map(([t]) => t)
 
@@ -13,7 +13,62 @@ function shadowRadiusPx() {
   return (Math.tan(Math.asin(sinA)) / Math.tan(fov / 2)) * (state.viewH / 2)
 }
 
+/** Follow an index reference: scroll to the part it names and hand focus to its heading. */
+function follow(e: React.MouseEvent, r: string) {
+  e.preventDefault()
+  const to = refTarget[r] === '#top' ? 0 : refTarget[r]
+  scrollToTarget(to)
+  focusTarget(to)
+}
+
+/** The index on a phone: one column, the term on the left, a dotted leader (drawn in CSS), its references on the right. */
+function PhoneIndex() {
+  let letter = ''
+  return (
+    <div className="pindex">
+      <div className="pindex-head">
+        <h3 className="label pindex-title">Index</h3>
+        <p className="pindex-note">II.1 is chapter II, part 1. {state.touch ? 'Tap a reference to go there.' : 'Each reference is a link.'}</p>
+      </div>
+      <ul className="pindex-list">
+        {bookIndex.map(([term, refs]) => {
+          const first = term[0].toUpperCase()
+          const head = first !== letter
+          letter = first
+          return (
+            <li key={term} className={head ? 'pi-row is-head' : 'pi-row'}>
+              <span className="pi-letter" aria-hidden="true">
+                {head ? first : ''}
+              </span>
+              <span className="pi-term">{term}</span>
+              <span className="pi-refs">
+                {refs.map((r, i) => (
+                  <Fragment key={r}>
+                    {refTarget[r] ? (
+                      <a className="pi-ref" href={refTarget[r]} onClick={(e) => follow(e, r)}>
+                        {r}
+                      </a>
+                    ) : (
+                      <span className="pi-ref is-plain">{r}</span>
+                    )}
+                    {i < refs.length - 1 ? (
+                      <span className="pi-sep" aria-hidden="true">
+                        ,
+                      </span>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 export function Orbit() {
+  const phone = usePhone()
   const section = useRef<HTMLElement>(null)
   const ring = useRef<HTMLDivElement>(null)
   const inView = useInView(section)
@@ -58,43 +113,41 @@ export function Orbit() {
           </div>
           <p className="lede">At one and a half Schwarzschild radii, light can circle a black hole indefinitely. These are the things that keep coming around in my work.</p>
         </div>
-        <div className="ring" aria-hidden="true">
-          <div className="ring-host" ref={ring}>
-            {ITEMS.map((t) => (
-              <span key={t} className="ring-item">
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="index">
-          <p className="index-title">Index</p>
-          {bookIndex.map(([term, refs]) => (
-            <p key={term}>
-              {term},{' '}
-              {refs.map((r, i) => (
-                <span key={r}>
-                  {refTarget[r] ? (
-                    <a
-                      href={refTarget[r]}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        const to = refTarget[r] === '#top' ? 0 : refTarget[r]
-                        scrollToTarget(to)
-                        focusTarget(to)
-                      }}
-                    >
-                      {r}
-                    </a>
-                  ) : (
-                    <i>{r}</i>
-                  )}
-                  {i < refs.length - 1 ? ', ' : ''}
-                </span>
+        {phone ? (
+          <PhoneIndex />
+        ) : (
+          <>
+            <div className="ring" aria-hidden="true">
+              <div className="ring-host" ref={ring}>
+                {ITEMS.map((t) => (
+                  <span key={t} className="ring-item">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="index">
+              <p className="index-title">Index</p>
+              {bookIndex.map(([term, refs]) => (
+                <p key={term}>
+                  {term},{' '}
+                  {refs.map((r, i) => (
+                    <span key={r}>
+                      {refTarget[r] ? (
+                        <a href={refTarget[r]} onClick={(e) => follow(e, r)}>
+                          {r}
+                        </a>
+                      ) : (
+                        <i>{r}</i>
+                      )}
+                      {i < refs.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </p>
               ))}
-            </p>
-          ))}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )

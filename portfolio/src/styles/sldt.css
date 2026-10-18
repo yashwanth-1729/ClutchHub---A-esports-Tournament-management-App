@@ -524,3 +524,444 @@
     animation: none;
   }
 }
+
+/* ---------- III. on a phone ----------
+   Everything below is phone-only. Desktop keeps the rules above untouched. */
+
+@media (max-width: 700px) {
+  /* --- how it works: label, lede, figure and one step, all between the bars --- */
+  /* pinned from the top, not centred, so the head and the figure hold still
+     while the steps change under them; the offset centres the longest step */
+  .proto-stage {
+    align-content: start;
+    padding-top: calc(var(--bar-top) + max(8px, (100svh - var(--bar-top) - var(--bar-bottom) - 560px) / 2));
+    padding-bottom: var(--bar-bottom);
+    gap: 0;
+  }
+  .proto-copy {
+    gap: 12px;
+  }
+  .proto-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .proto-count {
+    margin: 0;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .proto-count span {
+    color: var(--fg);
+  }
+  .proto-lede {
+    margin: 0;
+    line-height: 1.5;
+    text-wrap: balance;
+  }
+  /* the count in the head replaces the big numeral */
+  .proto-steps li {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px 0 0;
+  }
+  .proto-n {
+    display: none;
+  }
+  .proto-steps h3 {
+    text-wrap: balance;
+  }
+  .proto-steps li.active .proto-more {
+    max-height: none;
+    margin-top: 6px;
+    transition: none;
+  }
+  .proto-body {
+    line-height: 1.5;
+  }
+  .proto-tech {
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .proto-steps li.active {
+    animation: proto-in 0.5s var(--ease);
+  }
+  @keyframes proto-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* the phone figure */
+  .pd {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    color: var(--fg-3);
+  }
+  .pd rect {
+    fill: none;
+    stroke: rgb(var(--ink) / 0.55);
+    stroke-width: 1;
+  }
+  .pd text {
+    fill: var(--fg);
+    font-family: var(--text);
+    font-size: var(--fs-data);
+  }
+  .pd .t-mono {
+    font-family: var(--mono);
+    font-size: var(--fs-data);
+  }
+  .pd .t-small {
+    fill: var(--fg-2);
+  }
+  .pd .t-label {
+    font-family: var(--display);
+    font-stretch: 125%;
+    font-weight: 650;
+    font-size: var(--fs-caps);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .pd .t-center { text-anchor: middle; }
+  .pd .t-end { text-anchor: end; }
+  .pd .t-acc { fill: var(--pencil); }
+  .pd .t-red { fill: var(--red); }
+  .pd .t-dim { fill: var(--fg-3); }
+  .pd .pd-ah { fill: var(--fg-3); }
+  .pd .pd-ahp { fill: var(--pencil); }
+  .pd .pd-ahr { fill: var(--red); }
+  .pd .flow {
+    fill: none;
+    stroke: var(--pencil);
+    stroke-width: 1.2;
+    stroke-dasharray: 4 5;
+    animation: dash 1.2s linear infinite;
+  }
+  .pd .flow.red {
+    stroke: var(--red);
+  }
+  .pd .link {
+    fill: none;
+    stroke: var(--fg-3);
+    stroke-width: 1;
+  }
+  .pd .code {
+    stroke: var(--pencil);
+  }
+  .pd .doc {
+    stroke: var(--fg-2);
+  }
+  .pd .block {
+    stroke: var(--pencil);
+  }
+  .pd .shackle {
+    fill: none;
+    stroke: var(--pencil);
+    stroke-width: 1.3;
+  }
+  .pd .lock {
+    fill: var(--pencil);
+    stroke: none;
+  }
+  .pd .pill {
+    stroke: var(--rule);
+    stroke-dasharray: 2 2;
+  }
+  .pd .pill.lit {
+    stroke: var(--pencil);
+  }
+  .pd .latest {
+    stroke: var(--pencil);
+  }
+  .pd .seal {
+    fill: none;
+    stroke: var(--pencil);
+    stroke-width: 1;
+  }
+  .pd .seal-dot,
+  .pd .pkt {
+    fill: var(--pencil);
+  }
+  .pd .pkt.red {
+    fill: var(--red);
+  }
+  .pd .env rect {
+    fill: var(--pencil);
+    stroke: none;
+  }
+  .pd .tag.win {
+    stroke: var(--pencil);
+    stroke-width: 1.5;
+  }
+  .pd .tag.lose {
+    stroke-dasharray: 3 4;
+  }
+  /* one state per step, crossfading */
+  .pd .st {
+    opacity: 0;
+    transition: opacity 0.5s var(--ease);
+  }
+  .pd .st.on {
+    opacity: 1;
+  }
+  .pd .st.dim {
+    opacity: 0.28;
+  }
+  .pd .st:not(.on) .flow {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .proto-steps li.active {
+    animation: none;
+  }
+  .pd .flow {
+    animation: none;
+  }
+  .pd .st {
+    transition: none;
+  }
+}
+
+/* --- the working copy: one panel at a time, behind tabs that ride under the top bar --- */
+@media (max-width: 700px) {
+  .sldt-lab {
+    padding-top: 10vh;
+    padding-bottom: 10vh;
+  }
+  .lab-figure {
+    gap: 22px;
+  }
+  /* edge to edge: the tabs and the panel use the whole width of the phone */
+  .lab {
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 18px var(--gutter) 20px;
+    gap: 16px;
+  }
+  /* inline actions get a thumb-sized hit area without changing the line */
+  .lab-step .act,
+  .lab-meta .act {
+    position: relative;
+  }
+  .lab-step .act::after,
+  .lab-meta .act::after {
+    content: '';
+    position: absolute;
+    inset: calc((var(--tap) - 100%) / -2) -8px;
+  }
+  .lab-tabs {
+    position: sticky;
+    top: var(--bar-top);
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 0 var(--gutter);
+    /* solid, so nothing scrolling up behind the tabs shows through their labels */
+    background: rgb(0 0 0);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .lab-tab {
+    position: relative;
+    min-height: var(--tap);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    transition: color 0.3s var(--ease);
+  }
+  .lab-tab + .lab-tab {
+    border-left: 1px solid var(--rule);
+  }
+  .lab-tab[aria-selected='true'] {
+    color: var(--fg);
+  }
+  /* the selected tab is underlined in pencil, like an action in the text */
+  .lab-tab[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: -1px;
+    height: 2px;
+    background: var(--pencil);
+  }
+  .lab-tab:focus-visible {
+    outline-offset: -4px;
+  }
+  .lab-tab-t {
+    position: relative;
+  }
+  .lab-tab-dot {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 4px);
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background: var(--pencil);
+  }
+
+  /* the three panels share one cell, so switching tabs never moves what is below */
+  .lab-grid.tabbed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lab-grid.tabbed > .lab-dev,
+  .lab-grid.tabbed > .lab-store {
+    grid-area: 1 / 1;
+    order: 0 !important;
+    padding: 0;
+    border: 0;
+  }
+  .lab-grid.tabbed > .is-off {
+    visibility: hidden;
+  }
+  /* the tab already names the panel; the head keeps the detail */
+  .lab-grid.tabbed .lab-col-head i {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .lab-grid.tabbed .lab-col-head {
+    justify-content: flex-start;
+  }
+  .lab-dev textarea {
+    min-height: calc(4 * 1.3em + 12px);
+  }
+
+  /* what to try, as a list of rows */
+  .lab-moves {
+    display: grid;
+  }
+  .lab-moves-h {
+    padding: 14px 0 6px;
+    color: var(--fg-3);
+  }
+  .lab-moves-h:first-child {
+    padding-top: 0;
+  }
+  .lab-move {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: var(--tap);
+    padding: 6px 0;
+    border-top: 1px solid var(--rule);
+    text-align: left;
+    color: var(--fg);
+  }
+  .lab-move + .lab-moves-h {
+    border-top: 1px solid var(--rule);
+  }
+  .lab-move:last-child {
+    border-bottom: 1px solid var(--rule);
+  }
+  .lab-move-t {
+    font-weight: 540;
+    text-decoration: underline;
+    text-decoration-color: var(--pencil);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+  }
+  .lab-move .label {
+    color: var(--fg-3);
+  }
+  .lab-move:active .lab-move-t {
+    color: var(--pencil);
+  }
+  .lab-move[aria-disabled='true'] {
+    color: var(--fg-3);
+    cursor: default;
+  }
+  .lab-move[aria-disabled='true'] .lab-move-t {
+    text-decoration-color: var(--rule);
+  }
+  .lab-move.fix .lab-move-t {
+    color: var(--pencil);
+  }
+  .lab-log {
+    min-height: 200px !important;
+    max-height: 200px !important;
+  }
+
+  /* the caption sits over the disk: give it the same band as the rest of the reading */
+  .lab-figure figcaption {
+    position: relative;
+  }
+  .lab-figure figcaption::before {
+    content: '';
+    position: absolute;
+    inset: -40px -50vw;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.8) 40px, rgb(0 0 0 / 0.8) calc(100% - 40px), transparent);
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+
+/* --- the opener and the field notes --- */
+@media (max-width: 700px) {
+  .sldt-intro {
+    gap: 36px;
+    padding-top: 14vh;
+    padding-bottom: 12vh;
+  }
+  .thesis-cols {
+    gap: 22px;
+  }
+
+  .sldt-notes {
+    gap: 30px;
+    padding-top: 12vh;
+    padding-bottom: 12vh;
+    isolation: isolate;
+  }
+  /* one band of shade behind the notes, the tally and the limits, not a box per block */
+  .sldt-notes::before {
+    content: '';
+    position: absolute;
+    inset: calc(12vh - 72px) 0;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.8) 72px, rgb(0 0 0 / 0.8) calc(100% - 72px), transparent);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .sldt-notes .notes.backed::before {
+    display: none;
+  }
+  .notes {
+    gap: 22px;
+  }
+  .notes li {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+  .note-n {
+    padding-top: 4px;
+  }
+  .notes p {
+    line-height: 1.5;
+  }
+  .tally {
+    background: none;
+    gap: 22px 20px;
+    padding-top: 20px;
+  }
+  .tally p {
+    align-content: start;
+    gap: 6px;
+    line-height: 1.45;
+  }
+}

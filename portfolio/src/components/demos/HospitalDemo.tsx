@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { audio } from '../../audio/VoidAudio'
 import { signals } from '../../engine/signals'
-import { sleep } from '../../lib/hooks'
+import { state } from '../../engine/engine'
+import { sleep, usePhone } from '../../lib/hooks'
 
 type Who = 'you' | 'p2' | 'taken'
 type Slot = { t: string; by: Who | null; contested?: boolean }
@@ -26,6 +27,7 @@ export function HospitalDemo() {
   const [leads, setLeads] = useState(0)
   const booking = useRef(1040)
   const leadId = useRef(41)
+  const phone = usePhone()
 
   const push = (...lines: Line[]) => setLog((l) => [...l, ...lines.map((x) => ({ ...x, id: lineId.current++ }))].slice(-7))
 
@@ -69,6 +71,11 @@ export function HospitalDemo() {
 
   const full = slots.every((s) => s.by)
   const booked = slots.filter((s) => s.by === 'you' || s.by === 'p2').length
+  const newMorning = () => {
+    gen.current++
+    setSlots(initial())
+    push({ text: 'a new morning', cls: 'dim' })
+  }
 
   return (
     <div className="hs">
@@ -85,34 +92,52 @@ export function HospitalDemo() {
             data-cursor={s.by ? undefined : `book ${s.t}`}
           >
             <span className="hs-t">{s.t}</span>
-            <span className="hs-s">{s.contested ? 'contested' : s.by === 'you' ? 'yours' : s.by === 'p2' ? 'patient two' : s.by === 'taken' ? 'taken' : 'free'}</span>
+            <span className="hs-s">
+              {s.contested ? 'contested' : s.by === 'you' ? 'yours' : s.by === 'p2' ? (phone ? 'theirs' : 'patient two') : s.by === 'taken' ? 'taken' : 'free'}
+            </span>
           </button>
         ))}
       </div>
-      <p className="hs-actions">
-        Click any free time. Or{' '}
-        <button className="act" onClick={doubleSubmit} aria-disabled={busy}>
-          submit the intake form twice
-        </button>{' '}
-        and count the leads.
-        {full && !busy ? (
-          <>
-            {' '}
-            The morning is full;{' '}
-            <button
-              className="act"
-              onClick={() => {
-                gen.current++
-                setSlots(initial())
-                push({ text: 'a new morning', cls: 'dim' })
-              }}
-            >
-              start another
+      {phone ? (
+        // On a phone each action is its own full-width row, sized for a thumb.
+        <>
+          <p className="hs-actions">{state.touch ? 'Tap' : 'Click'} any free time. Then send one lead in twice and count what was stored.</p>
+          <div className="ph-acts">
+            <button className="ph-act" onClick={doubleSubmit} aria-disabled={busy}>
+              <span className="act">Submit the intake twice</span>
+              <span className="ph-k" aria-hidden="true">
+                {leads} stored
+              </span>
             </button>
-            .
-          </>
-        ) : null}
-      </p>
+            {full && !busy ? (
+              <button className="ph-act" onClick={newMorning}>
+                <span className="act">Start another morning</span>
+                <span className="ph-k" aria-hidden="true">
+                  this one is full
+                </span>
+              </button>
+            ) : null}
+          </div>
+        </>
+      ) : (
+        <p className="hs-actions">
+          {state.touch ? 'Tap' : 'Click'} any free time. Or{' '}
+          <button className="act" onClick={doubleSubmit} aria-disabled={busy}>
+            submit the intake form twice
+          </button>{' '}
+          and count the leads.
+          {full && !busy ? (
+            <>
+              {' '}
+              The morning is full;{' '}
+              <button className="act" onClick={newMorning}>
+                start another
+              </button>
+              .
+            </>
+          ) : null}
+        </p>
+      )}
       <pre className="demo-log" role="log" aria-live="polite" aria-relevant="additions">
         {log.map((l) => (
           <span key={l.id} className={l.cls}>

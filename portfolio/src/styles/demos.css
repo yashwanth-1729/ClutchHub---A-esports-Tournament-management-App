@@ -404,11 +404,117 @@
   .hs-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ---------- phones ----------
+   Every figure fits a 360px screen. Inline actions written into sentences become
+   full-width rows a thumb can hit; labels and hairlines stay the same. */
+
+@media (max-width: 700px) {
+  .ph-acts {
+    margin: 16px 0 0;
+    border-top: 1px solid var(--rule);
+  }
+  .ph-act {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    min-height: var(--tap);
+    padding: 10px 0;
+    text-align: left;
+    font-size: var(--fs-body);
+    line-height: 1.35;
+    border-bottom: 1px solid var(--rule);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ph-act:active .act {
+    color: var(--pencil);
+  }
+  .ph-act[aria-disabled='true'] {
+    cursor: default;
+  }
+  .ph-act[aria-disabled='true'] .act {
+    color: var(--fg-3);
+    text-decoration-color: var(--rule);
+  }
+  .ph-k {
+    font-family: var(--mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    white-space: nowrap;
+  }
+
+  /* JARVIS: three language keys, then the hold bar */
+  .jv-mascot canvas {
+    height: 200px;
+  }
+  .jv-pad {
+    margin-top: 18px;
+  }
+  .jv-pad > .label {
+    margin-bottom: 8px;
+  }
+  .jv-langs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .jv-lang {
+    min-height: var(--tap);
+    padding: 8px 4px;
+    font-size: var(--fs-body);
+    color: var(--fg-2);
+    box-shadow: inset 0 -2px 0 transparent;
+    transition: color 0.3s, box-shadow 0.3s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .jv-lang + .jv-lang {
+    border-left: 1px solid var(--rule);
+  }
+  .jv-lang:lang(te) {
+    font-family: var(--telugu);
+  }
+  .jv-lang[aria-pressed='true'] {
+    color: var(--pencil);
+    box-shadow: inset 0 -2px 0 var(--pencil);
+  }
+  .jv-pad .jv-hold {
+    -webkit-touch-callout: none;
+  }
+  .jv-row {
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 6px;
+  }
+  .jv-track,
+  .jv-play,
+  .jv-bp {
+    grid-column: 2;
+  }
+
+  /* Hospital */
+  .hs-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .hs-slot {
+    min-height: var(--tap);
+    padding: 10px 12px;
+  }
+
+  /* ClutchHub: each number column as wide as its mono head, with air between */
   .ch-row {
-    grid-template-columns: 34px minmax(0, 1fr) 44px 64px 54px;
+    grid-template-columns: 26px minmax(0, 1fr) repeat(3, 52px);
+    column-gap: 8px;
     font-size: var(--fs-small);
   }
-  /* the full word stays for screen readers */
+  /* "Place" on screen; the full word stays for screen readers */
   .wide-only {
     position: absolute;
     width: 1px;
@@ -424,6 +530,49 @@
   .ch-total em {
     right: 0;
     top: -1.2em;
+  }
+
+  /* SLDT: the checks in two columns of label over value, the last across both */
+  .sl-lens {
+    height: 232px;
+  }
+  .sl-status {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+    row-gap: 2px;
+  }
+  .sl-status dt {
+    padding-top: 10px;
+  }
+  .sl-status dt:nth-of-type(1) {
+    grid-area: 1 / 1;
+  }
+  .sl-status dd:nth-of-type(1) {
+    grid-area: 2 / 1;
+  }
+  .sl-status dt:nth-of-type(2) {
+    grid-area: 1 / 2;
+  }
+  .sl-status dd:nth-of-type(2) {
+    grid-area: 2 / 2;
+  }
+  .sl-status dt:nth-of-type(3) {
+    grid-area: 3 / 1;
+  }
+  .sl-status dd:nth-of-type(3) {
+    grid-area: 4 / 1;
+  }
+  .sl-status dt:nth-of-type(4) {
+    grid-area: 3 / 2;
+  }
+  .sl-status dd:nth-of-type(4) {
+    grid-area: 4 / 2;
+  }
+  .sl-status dt:nth-of-type(5) {
+    grid-area: 5 / 1 / auto / -1;
+  }
+  .sl-status dd:nth-of-type(5) {
+    grid-area: 6 / 1 / auto / -1;
   }
 }
 

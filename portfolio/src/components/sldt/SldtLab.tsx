@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { audio } from '../../audio/VoidAudio'
+import { getLenis, state } from '../../engine/engine'
 import { signals } from '../../engine/signals'
+import { usePhone } from '../../lib/hooks'
 import {
   ARGON,
   ConcurrentWriteConflict,
@@ -28,6 +30,13 @@ const td = new TextDecoder()
 type Snapshot = Map<string, { bytes: Uint8Array; version: number }>
 type Line = LogLine & { id: number }
 
+// phones: one panel at a time, behind tabs
+const TABS = ['Laptop', 'Phone', 'Store']
+const devSig = (d: Device) => {
+  const r = d.get(OID)
+  return `${r?.revision}|${r?.deviceId}|${r?.payload.body}|${d.lastRev}|${d.halted}`
+}
+
 export function SldtLab() {
   const lab = useRef<{
     store: DumbStore
@@ -46,6 +55,13 @@ export function SldtLab() {
   const [attacked, setAttacked] = useState<string | null>(null)
   const lineId = useRef(0)
   const raceBtn = useRef<HTMLButtonElement>(null)
+  const phone = usePhone()
+  const [tab, setTab] = useState(0)
+  const [unseen, setUnseen] = useState([false, false, false])
+  const seen = useRef<string[] | null>(null)
+  const tabBtns = useRef<(HTMLButtonElement | null)[]>([])
+  const tabBar = useRef<HTMLDivElement>(null)
+  const grid = useRef<HTMLDivElement>(null)
 
   const L = lab.current
   const push = (line: LogLine) => {
@@ -205,7 +221,7 @@ export function SldtLab() {
   if (objFile) {
     try {
       const env = JSON.parse(td.decode(objFile.bytes)) as { ct: string }
-      ctPreview = hex(Uint8Array.from(atob(env.ct), (c) => c.charCodeAt(0)).slice(0, 72)).replace(/(..)/g, '$1 ')
+      ctPreview = hex(Uint8Array.from(atob(env.ct), (c) => c.charCodeAt(0)).slice(0, phone ? 40 : 72)).replace(/(..)/g, '$1 ')
     } catch {
       ctPreview = '(unparseable bytes)'
     }
@@ -213,6 +229,56 @@ export function SldtLab() {
 
   const ready = phase === 'ready'
   const idle = ready && !busy && !attacked
+
+  // A change in a panel that is out of sight puts a dot on its tab until it is looked at:
+  // a sync landing on the other device, a new object or manifest in the store, a refusal.
+  const sigKey = [
+    devSig(L.a),
+    devSig(L.b),
+    `${manifest?.signature}|${manifest?.data.revision}|${manifest?.data.objects[OID]?.revision}|${objFile?.version}|${ctPreview}|${attacked}`,
+  ].join('\u0000')
+  useEffect(() => {
+    if (!phone) return
+    const now = sigKey.split('\u0000')
+    const before = seen.current
+    seen.current = now.map((v, i) => (i === tab || !before ? v : before[i]))
+    if (!before) return
+    setUnseen((u) => {
+      const next = u.map((on, i) => (i === tab ? false : on || now[i] !== before[i]))
+      return next.some((v, i) => v !== u[i]) ? next : u
+    })
+  }, [sigKey, tab, phone])
+
+  const pick = (i: number) => {
+    setTab(i)
+    // if the panels have scrolled up under the tabs, bring the new one's top back into view
+    const bar = tabBar.current?.getBoundingClientRect()
+    const top = grid.current?.getBoundingClientRect().top
+    if (bar && top !== undefined && top < bar.bottom) {
+      const y = window.scrollY + top - bar.bottom - 12
+      const lenis = getLenis()
+      if (lenis) lenis.scrollTo(y, state.reduced ? { immediate: true, force: true } : { duration: 0.6, force: true })
+      else window.scrollTo({ top: y })
+    }
+  }
+  const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const n = { ArrowRight: (tab + 1) % 3, ArrowLeft: (tab + 2) % 3, Home: 0, End: 2 }[e.key]
+    if (n === undefined) return
+    e.preventDefault()
+    pick(n)
+    tabBtns.current[n]?.focus()
+  }
+  // on a phone each column is a tab panel; on a desktop nothing about them changes
+  const panel = (i: number) =>
+    phone
+      ? {
+          id: `lab-panel-${i}`,
+          role: 'tabpanel',
+          'aria-labelledby': `lab-tab-${i}`,
+          tabIndex: i === 2 && i === tab ? 0 : undefined,
+        }
+      : {}
+  const offCls = (i: number) => (phone && i !== tab ? ' is-off' : '')
   // controls stay mounted while unavailable, so keyboard focus never falls back to the page
   const guard = (ok: boolean, fn: () => void) => () => {
     if (ok) fn()
@@ -240,12 +306,43 @@ export function SldtLab() {
         )}
       </p>
 
-      <div className={`lab-grid ${ready ? '' : 'locked'}`} inert={!ready}>
+      {phone ? (
+        <div className="lab-tabs" role="tablist" aria-label="Where to look" ref={tabBar} onKeyDown={onTabKey}>
+          {TABS.map((t, i) => (
+            <button
+              key={t}
+              ref={(el) => {
+                tabBtns.current[i] = el
+              }}
+              id={`lab-tab-${i}`}
+              className="lab-tab"
+              role="tab"
+              aria-selected={i === tab}
+              aria-controls={`lab-panel-${i}`}
+              tabIndex={i === tab ? 0 : -1}
+              onClick={() => pick(i)}
+            >
+              {/* the dot hangs off the word, so the word never shifts when it appears */}
+              <span className="lab-tab-t">
+                {t}
+                {unseen[i] ? (
+                  <>
+                    <span className="lab-tab-dot" aria-hidden="true" />
+                    <span className="sr-only">, changed</span>
+                  </>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className={`lab-grid ${ready ? '' : 'locked'}${phone ? ' tabbed' : ''}`} inert={!ready} ref={grid}>
         {[L.a, L.b].map((d, i) => {
           const rec = d.get(OID)
           const canSync = ready && !busy && !attacked && !d.busy && !d.halted
           return (
-            <div key={d.id} className={`lab-dev ${d.halted ? 'halted' : ''}`} style={{ order: i === 0 ? 0 : 2 }}>
+            <div key={d.id} className={`lab-dev ${d.halted ? 'halted' : ''}${offCls(i)}`} style={{ order: i === 0 ? 0 : 2 }} {...panel(i)}>
               <p className="lab-col-head">
                 <i>The {d.name.trim()}</i> <span className="mono">device {d.id}</span>
               </p>
@@ -280,7 +377,7 @@ export function SldtLab() {
           )
         })}
 
-        <div className="lab-store" style={{ order: 1 }}>
+        <div className={`lab-store${offCls(2)}`} style={{ order: 1 }} {...panel(2)}>
           <p className="lab-col-head">
             <i>The store</i> <span className="lab-aside">a public repository, in real life</span>
           </p>
@@ -319,41 +416,70 @@ export function SldtLab() {
         </div>
       </div>
 
-      <p className="lab-step">
-        {ready ? (
-          <>
-            Now{' '}
-            <button className="act" ref={raceBtn} aria-disabled={!idle} onClick={guard(idle, race)}>
-              edit both and sync at once
+      {phone && ready ? (
+        <div className="lab-moves">
+          <p className="label lab-moves-h">Now</p>
+          <button className="lab-move" ref={raceBtn} aria-disabled={!idle} onClick={guard(idle, race)}>
+            <span className="lab-move-t">Edit both and sync at once</span>
+            <span className="label">race</span>
+          </button>
+          <p className="label lab-moves-h">Then attack the store</p>
+          <button className="lab-move" aria-disabled={!idle} onClick={guard(idle, flip)}>
+            <span className="lab-move-t">Flip a bit</span>
+            <span className="label">tamper</span>
+          </button>
+          <button className="lab-move" aria-disabled={!idle} onClick={guard(idle, forge)}>
+            <span className="lab-move-t">Forge the manifest</span>
+            <span className="label">tamper</span>
+          </button>
+          <button className="lab-move" aria-disabled={!idle} onClick={guard(idle, rollback)}>
+            <span className="lab-move-t">Serve an old one</span>
+            <span className="label">replay</span>
+          </button>
+          {attacked ? (
+            <button className="lab-move fix" aria-disabled={busy} onClick={guard(!busy, heal)}>
+              <span className="lab-move-t">Restore the store</span>
+              <span className="label">undo</span>
             </button>
-            . Then attack the store:{' '}
-            <button className="act" aria-disabled={!idle} onClick={guard(idle, flip)}>
-              flip a bit
-            </button>
-            ,{' '}
-            <button className="act" aria-disabled={!idle} onClick={guard(idle, forge)}>
-              forge the manifest
-            </button>
-            , or{' '}
-            <button className="act" aria-disabled={!idle} onClick={guard(idle, rollback)}>
-              serve an old one
-            </button>
-            .
-            {attacked ? (
-              <>
-                {' '}
-                When you’ve seen enough,{' '}
-                <button className="act" aria-disabled={busy} onClick={guard(!busy, heal)}>
-                  restore the store
-                </button>
-                .
-              </>
-            ) : null}
-          </>
-        ) : (
-          <span className="dim">The rest unlocks once the dataset exists.</span>
-        )}
-      </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="lab-step">
+          {ready ? (
+            <>
+              Now{' '}
+              <button className="act" ref={raceBtn} aria-disabled={!idle} onClick={guard(idle, race)}>
+                edit both and sync at once
+              </button>
+              . Then attack the store:{' '}
+              <button className="act" aria-disabled={!idle} onClick={guard(idle, flip)}>
+                flip a bit
+              </button>
+              ,{' '}
+              <button className="act" aria-disabled={!idle} onClick={guard(idle, forge)}>
+                forge the manifest
+              </button>
+              , or{' '}
+              <button className="act" aria-disabled={!idle} onClick={guard(idle, rollback)}>
+                serve an old one
+              </button>
+              .
+              {attacked ? (
+                <>
+                  {' '}
+                  When you’ve seen enough,{' '}
+                  <button className="act" aria-disabled={busy} onClick={guard(!busy, heal)}>
+                    restore the store
+                  </button>
+                  .
+                </>
+              ) : null}
+            </>
+          ) : (
+            <span className="dim">The rest unlocks once the dataset exists.</span>
+          )}
+        </p>
+      )}
 
       <pre className="demo-log lab-log" role="log" aria-live="polite" aria-relevant="additions">
         {log.length ? null : <span className="dim">Every line here comes from the engine as it runs.{'\n'}</span>}

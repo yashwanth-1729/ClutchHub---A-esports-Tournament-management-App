@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { audio } from '../../audio/VoidAudio'
 import { signals } from '../../engine/signals'
 import { state } from '../../engine/engine'
-import { useInView } from '../../lib/hooks'
+import { useInView, usePhone } from '../../lib/hooks'
 
 // Free Fire squad placement points, 1st to 12th.
 const PLACEMENT = [12, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0]
@@ -34,6 +34,7 @@ export function ClutchDemo() {
   // plays itself unless the visitor prefers less motion, and can always be paused
   const [auto, setAuto] = useState(!state.reduced)
   const timer = useRef(0)
+  const phone = usePhone()
 
   const play = () => {
     // remember where every row is before the reshuffle
@@ -133,17 +134,38 @@ export function ClutchDemo() {
           )
         })}
       </div>
-      <p className="ch-foot">
-        Total is kills plus placement points, {PLACEMENT.slice(0, 4).join(', ')}… down to zero for twelfth.{' '}
-        <button className="act" onClick={playNow}>
-          {done ? 'Run another tournament' : 'Play the next match'}
-        </button>
-        , or{' '}
-        <button className="act" onClick={() => setAuto((a) => !a)}>
-          {auto ? 'stop it playing itself' : 'let it play itself'}
-        </button>
-        .
-      </p>
+      {phone ? (
+        // On a phone each action is its own full-width row, sized for a thumb.
+        <>
+          <p className="ch-foot">Total is kills plus placement points, {PLACEMENT.slice(0, 4).join(', ')}… down to zero for twelfth.</p>
+          <div className="ph-acts">
+            <button className="ph-act" onClick={playNow}>
+              <span className="act">{done ? 'Run another tournament' : 'Play the next match'}</span>
+              <span className="ph-k" aria-hidden="true">
+                {done ? 'six played' : `${match + 1} of ${MAPS.length}`}
+              </span>
+            </button>
+            <button className="ph-act" onClick={() => setAuto((a) => !a)}>
+              <span className="act">{auto ? 'Stop it playing itself' : 'Let it play itself'}</span>
+              <span className="ph-k" aria-hidden="true">
+                {auto ? 'every 3 s' : 'paused'}
+              </span>
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="ch-foot">
+          Total is kills plus placement points, {PLACEMENT.slice(0, 4).join(', ')}… down to zero for twelfth.{' '}
+          <button className="act" onClick={playNow}>
+            {done ? 'Run another tournament' : 'Play the next match'}
+          </button>
+          , or{' '}
+          <button className="act" onClick={() => setAuto((a) => !a)}>
+            {auto ? 'stop it playing itself' : 'let it play itself'}
+          </button>
+          .
+        </p>
+      )}
     </div>
   )
 }
