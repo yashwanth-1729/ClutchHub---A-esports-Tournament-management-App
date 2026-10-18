@@ -29,6 +29,7 @@ function brownNoise(ctx: AudioContext, seconds: number) {
 export class VoidAudio {
   private ctx: AudioContext | null = null
   private master!: GainNode
+  private ducker!: GainNode
   private verb!: GainNode
   private filter!: BiquadFilterNode
   private oscs: OscillatorNode[] = []
@@ -52,7 +53,9 @@ export class VoidAudio {
     this.master.gain.value = 0
     const comp = ctx.createDynamicsCompressor()
     comp.threshold.value = -18
-    this.master.connect(comp).connect(ctx.destination)
+    // a second gain after the master, so ducking never fights the on/off fades
+    this.ducker = ctx.createGain()
+    this.master.connect(this.ducker).connect(comp).connect(ctx.destination)
 
     const conv = ctx.createConvolver()
     conv.buffer = impulse(ctx, 4.5, 2.6)
@@ -134,6 +137,12 @@ export class VoidAudio {
 
   toggle() {
     this.setEnabled(!this.enabled)
+  }
+
+  /** Lower everything synthesized here while a voice clip plays over it. */
+  duck(on: boolean) {
+    if (!this.ctx) return
+    this.ducker.gain.setTargetAtTime(on ? 0.3 : 1, this.ctx.currentTime, on ? 0.08 : 0.35)
   }
 
   subscribe(fn: (on: boolean) => void) {

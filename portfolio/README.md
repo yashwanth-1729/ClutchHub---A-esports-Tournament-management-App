@@ -25,7 +25,7 @@ Any static host works. On Vercel, import the repository and keep the detected Vi
 
 - Copy, projects, links and the index all live in `src/content.ts`. Empty links (Instagram, LinkedIn, website) stay hidden until they are filled in.
 - Camera framing per section lives in `FRAMES` in `src/engine/engine.ts`.
-- To give the JARVIS figure a voice, drop `en.mp3`, `te.mp3`, `hi.mp3` and `lock.mp3` into `public/voice/` and set `HAS_VOICE` to `true` in `src/components/demos/JarvisDemo.tsx`. Until then the figure greets you in text only.
+- The JARVIS figure's voice clips in `public/voice/` are made the way the app makes its own: Kokoro `af_sky` for English, Grok Voice `eve` for Telugu and Hindi, through OpenRouter at a pace of 1.15, then trimmed and levelled to -18 LUFS. The drone ducks while they play. Set `HAS_VOICE` to `false` in `src/components/demos/JarvisDemo.tsx` for text only.
 
 ## Accessibility
 

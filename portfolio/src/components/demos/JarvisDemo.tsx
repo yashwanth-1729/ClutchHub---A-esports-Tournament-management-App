@@ -12,8 +12,11 @@ const LINES: Record<Lang, { label: string; text: string; lang: string }> = {
 }
 const LOCK_LINE = 'Locked in. I’ll keep everything else quiet until you’re done.'
 const HOLD_MS = 1100
-// Flip on once en.mp3, te.mp3, hi.mp3 and lock.mp3 are in public/voice/.
-const HAS_VOICE = false
+// The clips in public/voice/ are the app's own voices, made the way the app
+// makes them: Kokoro "af_sky" for English, Grok Voice "eve" for Telugu and
+// Hindi, both through OpenRouter at the app's pace of 1.15.
+const HAS_VOICE = true
+const CLIPS = ['en', 'te', 'hi', 'lock']
 
 function Mascot({ talking, hovered }: { talking: boolean; hovered: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -278,24 +281,61 @@ export function JarvisDemo() {
   const justHeld = useRef(false)
   const talkTimer = useRef(0)
   const voiceEl = useRef<HTMLAudioElement | null>(null)
+  const clips = useRef(new Map<string, HTMLAudioElement>())
+  const [soundOn, setSoundOn] = useState(audio.enabled)
+
+  // one element per clip, made on first need and reused, so a replay is instant
+  const clip = (file: string) => {
+    let a = clips.current.get(file)
+    if (!a) {
+      a = new Audio(`voice/${file}.mp3`)
+      a.preload = 'auto'
+      clips.current.set(file, a)
+    }
+    return a
+  }
+  const stopVoice = () => {
+    const a = voiceEl.current
+    if (a && !a.paused) a.pause()
+    audio.duck(false)
+  }
+
+  // turning the sound off mid-sentence stops the sentence too
+  useEffect(
+    () =>
+      audio.subscribe((on) => {
+        setSoundOn(on)
+        if (!on) stopVoice()
+      }),
+    [],
+  )
 
   const speak = (text: string, file: string, ms: number) => {
     setLine(text)
     setTalking(true)
     window.clearTimeout(talkTimer.current)
-    voiceEl.current?.pause()
+    stopVoice()
+    let wait = ms
     if (HAS_VOICE && audio.enabled) {
-      const a = new Audio(`/voice/${file}.mp3`)
-      a.volume = 0.9
+      const a = clip(file)
       voiceEl.current = a
-      a.onended = () => setTalking(false)
-      a.onloadedmetadata = () => {
-        window.clearTimeout(talkTimer.current)
-        talkTimer.current = window.setTimeout(() => setTalking(false), a.duration * 1000 + 200)
+      a.currentTime = 0
+      a.volume = 0.95
+      a.onended = () => {
+        audio.duck(false)
+        setTalking(false)
       }
-      a.play().catch(() => {})
+      if (a.duration > 0) wait = a.duration * 1000 + 250
+      else
+        a.onloadedmetadata = () => {
+          window.clearTimeout(talkTimer.current)
+          talkTimer.current = window.setTimeout(() => setTalking(false), a.duration * 1000 + 250)
+        }
+      // the drone steps back while JARVIS talks
+      audio.duck(true)
+      a.play().catch(() => audio.duck(false))
     }
-    talkTimer.current = window.setTimeout(() => setTalking(false), ms)
+    talkTimer.current = window.setTimeout(() => setTalking(false), wait)
   }
 
   const pick = (l: Lang) => {
@@ -341,7 +381,7 @@ export function JarvisDemo() {
     () => () => {
       cancelAnimationFrame(holdRaf.current)
       window.clearTimeout(talkTimer.current)
-      voiceEl.current?.pause()
+      stopVoice()
     },
     [],
   )
@@ -359,12 +399,20 @@ export function JarvisDemo() {
 
   return (
     <div className="jv">
-      <div className="jv-stage" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
+      <div
+        className="jv-stage"
+        onPointerEnter={() => {
+          setHovered(true)
+          // warm the clips while the pointer approaches the controls
+          if (HAS_VOICE && audio.enabled) CLIPS.forEach(clip)
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
         <Mascot talking={talking} hovered={hovered} />
         <p className="jv-bubble" lang={locked ? 'en' : LINES[lang].lang} aria-live="polite">
           “{line}”
         </p>
-        <p className="jv-state">{locked ? 'locked in' : talking ? 'greeting' : hovered ? 'listening' : 'idle'}</p>
+        <p className="jv-state">{locked ? 'locked in' : talking ? (soundOn ? 'speaking' : 'sound off') : hovered ? 'listening' : 'idle'}</p>
       </div>
       <p className="jv-controls">
         Greet me in{' '}
