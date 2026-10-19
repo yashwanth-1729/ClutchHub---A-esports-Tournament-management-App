@@ -827,6 +827,18 @@
   .lab-grid.tabbed > .is-off {
     visibility: hidden;
   }
+  /* until the dataset exists there is nothing to switch to: the closed tabs take no room,
+     and the empty editor waits for something to edit */
+  .lab-grid.tabbed.locked > .is-off {
+    display: none;
+  }
+  .lab-grid.tabbed.locked textarea {
+    display: none;
+  }
+  /* nor is there anything to log yet */
+  section:has(.lab-grid.tabbed.locked) .lab-log {
+    min-height: 0 !important;
+  }
   /* the tab already names the panel; the head keeps the detail */
   .lab-grid.tabbed .lab-col-head i {
     position: absolute;

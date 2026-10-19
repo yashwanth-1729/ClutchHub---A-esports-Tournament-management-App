@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { audio } from '../audio/VoidAudio'
 import { focusTarget, onAnchors, scrollToTarget, state } from '../engine/engine'
-import { useFrame, usePhone } from '../lib/hooks'
+import { COMPACT_QUERY, useFrame, useMedia, usePhone } from '../lib/hooks'
 import { brand } from '../content'
 import { ChapterSheet, ROW_BY_KEY, elapsedSentence } from './ChapterSheet'
 
@@ -24,24 +24,10 @@ const CHAPTERS: Record<string, [string, string]> = {
   contact: ['V.', 'The horizon'],
 }
 
-/** At this width and below the desktop links are gone (global.css), so the chapter sheet stands in for them. */
-const SHEET_QUERY = '(max-width: 900px)'
-
-function useMedia(query: string) {
-  const [match, setMatch] = useState(() => typeof window !== 'undefined' && matchMedia(query).matches)
-  useEffect(() => {
-    const mq = matchMedia(query)
-    const on = () => setMatch(mq.matches)
-    on()
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [query])
-  return match
-}
 
 export function Hud() {
   const phone = usePhone()
-  const sheetWidth = useMedia(SHEET_QUERY)
+  const sheetWidth = useMedia(COMPACT_QUERY)
   const hud = useRef<HTMLDivElement>(null)
   const folio = useRef<HTMLSpanElement>(null)
   const elapsed = useRef<HTMLSpanElement>(null)

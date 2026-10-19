@@ -4,7 +4,8 @@
    as a book sets one. V stacks the message field over its button and turns the
    sentence of links into rows a thumb can hit. Desktop is untouched. */
 
-@media (max-width: 700px) {
+/* the index also stands in for the ring from 701 to 900px, where the ring overprints it */
+@media (max-width: 900px) {
   /* ---------- IV. the photon sphere ---------- */
 
   .orbit-stage {
@@ -153,6 +154,16 @@
     color: var(--fg-3);
   }
 
+}
+
+/* wider than a phone, the one-column index keeps a reading measure */
+@media (min-width: 701px) and (max-width: 900px) {
+  .pindex {
+    max-width: 40rem;
+  }
+}
+
+@media (max-width: 700px) {
   /* ---------- V. the horizon ---------- */
 
   .contact {

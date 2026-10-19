@@ -25,17 +25,25 @@ export function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-/** The phone layout: one column, a bottom bar, sections rebuilt for a thumb. CSS uses the same query. */
-export const PHONE_QUERY = '(max-width: 700px)'
-
-export function usePhone() {
-  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && matchMedia(PHONE_QUERY).matches)
+/** True while the media query matches. */
+export function useMedia(query: string) {
+  const [match, setMatch] = useState(() => typeof window !== 'undefined' && matchMedia(query).matches)
   useEffect(() => {
-    const mq = matchMedia(PHONE_QUERY)
-    const on = () => setPhone(mq.matches)
+    const mq = matchMedia(query)
+    const on = () => setMatch(mq.matches)
     on()
     mq.addEventListener('change', on)
     return () => mq.removeEventListener('change', on)
-  }, [])
-  return phone
+  }, [query])
+  return match
+}
+
+/** The phone layout: one column, a bottom bar, sections rebuilt for a thumb. CSS uses the same query. */
+export const PHONE_QUERY = '(max-width: 700px)'
+
+/** At this width and below the desktop links are gone (global.css): the chapter sheet and the one-column index stand in. */
+export const COMPACT_QUERY = '(max-width: 900px)'
+
+export function usePhone() {
+  return useMedia(PHONE_QUERY)
 }

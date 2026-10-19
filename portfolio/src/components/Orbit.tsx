@@ -1,7 +1,7 @@
 import { Fragment, useRef } from 'react'
 import { bookIndex, refTarget } from '../content'
 import { focusTarget, scrollToTarget, state } from '../engine/engine'
-import { useFrame, useInView, usePhone } from '../lib/hooks'
+import { COMPACT_QUERY, useFrame, useInView, useMedia } from '../lib/hooks'
 
 const ITEMS = bookIndex.map(([t]) => t)
 
@@ -68,7 +68,8 @@ function PhoneIndex() {
 }
 
 export function Orbit() {
-  const phone = usePhone()
+  // the ring overprints the index wherever the desktop layout no longer fits around it
+  const compact = useMedia(COMPACT_QUERY)
   const section = useRef<HTMLElement>(null)
   const ring = useRef<HTMLDivElement>(null)
   const inView = useInView(section)
@@ -113,7 +114,7 @@ export function Orbit() {
           </div>
           <p className="lede">At one and a half Schwarzschild radii, light can circle a black hole indefinitely. These are the things that keep coming around in my work.</p>
         </div>
-        {phone ? (
+        {compact ? (
           <PhoneIndex />
         ) : (
           <>
