@@ -9,5 +9,9 @@ export default defineConfig({
     target: 'es2022',
     assetsInlineLimit: 0,
     chunkSizeWarningLimit: 700,
+    // two pages: the portfolio, and SIDS at /sids
+    rollupOptions: {
+      input: { main: 'index.html', sids: 'sids/index.html' },
+    },
   },
 })

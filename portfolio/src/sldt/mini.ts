@@ -1,4 +1,4 @@
-// A faithful miniature of SLDT, small enough to run in a portfolio.
+// A faithful miniature of SIDS (formerly SLDT), small enough to run in a portfolio.
 // Same primitives as the real engine (jarvis-oss/sldt): Argon2id identity,
 // domain-separated keys, padded AES-256-GCM envelopes, an HMAC-signed and
 // hash-chained manifest, compare-and-swap writes with exponential backoff,
@@ -68,7 +68,7 @@ export function newIdentity(): Identity {
   }
 }
 
-export const recoveryCode = (id: Identity) => `SLDT:${id.datasetId}:${id.secret}`
+export const recoveryCode = (id: Identity) => `SIDS:${id.datasetId}:${id.secret}`
 
 type ArgonResult = { out: Uint8Array; memoryKiB: number; ms: number }
 type ArgonRequest = { password: string; salt: Uint8Array; iterations: number; memoryKiB: number; bytes: number }

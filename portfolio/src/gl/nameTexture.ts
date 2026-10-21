@@ -32,7 +32,8 @@ export const PORTRAIT = { halfW: 10.5, y: 11.5 }
 export function drawNamePlate(text: string, portrait: boolean): NamePlate {
   const name = text.toUpperCase()
   const cut = Math.floor(name.length / 2)
-  const lines = portrait ? [name.slice(0, cut), name.slice(cut)] : [name]
+  // a short word stays on one line even on a phone
+  const lines = portrait && name.length > 5 ? [name.slice(0, cut), name.slice(cut)] : [name]
   const W = portrait ? 1400 : 2400
   const lineH = portrait ? 480 : 420
   const H = lineH * lines.length + (portrait ? 80 : 60)
@@ -64,6 +65,7 @@ export function drawNamePlate(text: string, portrait: boolean): NamePlate {
   })
 
   // world units: wide enough that the hole only swallows a letter or two
-  const halfW = portrait ? PORTRAIT.halfW : 31
+  // one short line on a phone is drawn narrower, so the whole word stays on screen
+  const halfW = portrait ? (lines.length === 1 ? 7 : PORTRAIT.halfW) : 31
   return { canvas: c, halfW, halfH: halfW * (H / W), z: 15, y: portrait ? PORTRAIT.y : 0 }
 }

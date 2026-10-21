@@ -226,7 +226,11 @@ function ProjectSection({ p, fig }: { p: Project; fig: number }) {
     </h3>
   )
   const kicker = <p className="kicker">{p.kicker}</p>
-  const original = p.original ? <p className="original">An architecture I designed. Chapter III takes it apart.</p> : null
+  const original = p.original ? (
+    <p className="original">
+      An architecture I designed, with <a href="/sids">a page of its own</a>.
+    </p>
+  ) : null
   const stage = (
     <figure className="project-stage">
       <div className="figure">{DEMOS[p.id]()}</div>

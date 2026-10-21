@@ -9,7 +9,7 @@ import { Hero } from './components/Hero'
 import { About } from './components/About'
 import { Work } from './components/Work'
 import { Orbit } from './components/Orbit'
-import { SldtChapter } from './components/sldt/SldtChapter'
+import { SidsDoor } from './components/sids/SidsSections'
 import { Contact } from './components/Contact'
 
 export default function App() {
@@ -84,7 +84,7 @@ export default function App() {
         <Hero />
         <About />
         <Work />
-        <SldtChapter />
+        <SidsDoor />
         <Orbit />
         <Contact />
       </main>

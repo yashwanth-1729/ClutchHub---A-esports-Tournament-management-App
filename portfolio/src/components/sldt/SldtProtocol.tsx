@@ -66,13 +66,13 @@ export function SldtProtocol() {
   const on = (...s: number[]) => (s.includes(step) ? 'on' : '')
 
   return (
-    <section className="proto" data-frame="protocol" ref={section} aria-labelledby="proto-h">
+    <section className="proto" id="how" data-frame="protocol" ref={section} aria-labelledby="proto-h">
       <div className="proto-stage wrap">
         <div className="proto-copy backed">
           {phone ? (
             <div className="proto-head">
               <p className="label" id="proto-h">
-                <b>III.1–5</b>How it works
+                <b>02</b>How it works
               </p>
               {/* every step stays in the accessibility tree, so the count is for the eye only */}
               <p className="proto-count mono" aria-hidden="true">
@@ -81,7 +81,7 @@ export function SldtProtocol() {
             </div>
           ) : (
             <p className="label" id="proto-h">
-              <b>III.1–5</b>How it works
+              <b>02</b>How it works
             </p>
           )}
           <p className="proto-lede">In plain words: your devices share a locked notebook through storage that can’t open it.</p>
@@ -121,7 +121,7 @@ export function SldtProtocol() {
           {/* identity */}
           <g className={`g-id ${on(0)}`}>
             <rect x="270" y="20" width="260" height="96" rx="6" />
-            <text x="400" y="52" className="t-mono t-center">SLDT:datasetId:secret</text>
+            <text x="400" y="52" className="t-mono t-center">SIDS:datasetId:secret</text>
             <text x="400" y="74" className="t-small t-center">your recovery code, made slow to guess</text>
             <text x="400" y="96" className="t-small t-center t-acc">split into two keys</text>
             <use href="#p-id-a" className="flow" />

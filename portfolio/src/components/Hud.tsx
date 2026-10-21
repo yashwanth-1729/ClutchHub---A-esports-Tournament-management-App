@@ -1,32 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { audio } from '../audio/VoidAudio'
-import { focusTarget, onAnchors, scrollToTarget, state } from '../engine/engine'
+import { onAnchors, state } from '../engine/engine'
 import { COMPACT_QUERY, useFrame, useMedia, usePhone } from '../lib/hooks'
+import { follow } from '../lib/nav'
 import { brand } from '../content'
-import { ChapterSheet, ROW_BY_KEY, elapsedSentence } from './ChapterSheet'
+import { PORTFOLIO, type ChapterRow, type SiteNav } from '../site'
+import { ChapterSheet, elapsedSentence } from './ChapterSheet'
 
 export { minutes } from './ChapterSheet'
 
 // Running head: the chapter you are in. Folio: how far from the singularity.
-const CHAPTERS: Record<string, [string, string]> = {
-  hero: ['', 'Plate I'],
-  about: ['I.', 'Orientation'],
-  work: ['II.', 'Debris'],
-  jarvis: ['II.1', 'JARVIS'],
-  hospital: ['II.2', 'Hospital Automation'],
-  clutchhub: ['II.3', 'ClutchHub'],
-  sldt: ['II.4', 'SLDT'],
-  sldtIntro: ['III.', 'Sync without a server'],
-  protocol: ['III.', 'Sync without a server'],
-  sldtLab: ['III.', 'A working copy'],
-  sldtNotes: ['III.', 'Field notes'],
-  orbit: ['IV.', 'The photon sphere'],
-  contact: ['V.', 'The horizon'],
-}
-
-
-export function Hud() {
+export function Hud({ nav = PORTFOLIO }: { nav?: SiteNav }) {
   const phone = usePhone()
+  // every row by its section key, for the phone's running head
+  const rowByKey = useMemo(
+    () => Object.fromEntries(nav.contents.flatMap((r) => [r, ...(r.children ?? [])]).map((r) => [r.key, r])) as Record<string, ChapterRow>,
+    [nav],
+  )
+  const first = Object.keys(nav.heads)[0]
   const sheetWidth = useMedia(COMPACT_QUERY)
   const hud = useRef<HTMLDivElement>(null)
   const folio = useRef<HTMLSpanElement>(null)
@@ -35,7 +26,7 @@ export function Hud() {
   const [marks, setMarks] = useState<{ key: string; y: number }[]>([])
   // phones: where each section starts, since one phone section can run for several screens
   const tops = useRef<{ key: string; top: number }[]>([])
-  const [current, setCurrent] = useState('hero')
+  const [current, setCurrent] = useState(first)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [fromKeyboard, setFromKeyboard] = useState(false)
   const opener = useRef<HTMLElement | null>(null)
@@ -74,7 +65,7 @@ export function Hud() {
       f.top = top
       hud.current?.classList.toggle('at-top', top)
     }
-    let key = 'hero'
+    let key = first
     if (phone) {
       // the section whose top has passed the middle of the screen
       for (const t of tops.current) if (state.scrollY >= t.top - window.innerHeight * 0.5) key = t.key
@@ -85,11 +76,6 @@ export function Hud() {
     if (key !== current) setCurrent(key)
   })
 
-  const go = (target: string | number) => (e: React.MouseEvent) => {
-    e.preventDefault()
-    scrollToTarget(target)
-    focusTarget(target)
-  }
   const openSheet = (e: React.MouseEvent<HTMLElement>) => {
     opener.current = e.currentTarget
     // Enter and Space fire a click with no pointer behind it
@@ -105,17 +91,23 @@ export function Hud() {
     if (!sheetWidth) setSheetOpen(false)
   }, [sheetWidth])
 
-  const [num, title] = CHAPTERS[current] ?? ['', '']
-  // the phone's running head names the exact part, as the chapter sheet does; on the plate it is the contents
-  const row = ROW_BY_KEY[current]
-  const [pNum, pTitle] = row ? [row.num, row.title] : current === 'hero' ? ['I–V', 'Contents'] : [num, title]
-  const runheadName = current === 'hero' ? 'Contents, chapters I to V' : `${pNum ? `${pNum} ` : ''}${pTitle}, all chapters`
+  const [num, title] = nav.heads[current] ?? ['', '']
+  // the phone's running head names the exact part, as the chapter sheet does; on the opening screen it is the contents
+  const row = rowByKey[current]
+  const opening = current === first
+  const [pNum, pTitle] = row ? [row.num, row.title] : opening ? [nav.opening.num, nav.opening.title] : [num, title]
+  const runheadName = opening ? nav.opening.name : `${pNum ? `${pNum} ` : ''}${pTitle}, all chapters`
 
   return (
     <>
       <div className="hud at-top" ref={hud}>
         <div className="head">
-          <a className="wordmark" href="#top" onClick={go(0)} aria-label={`${brand.mark}, back to the top`}>
+          <a
+            className="wordmark"
+            href={nav.home === 0 ? '#top' : String(nav.home)}
+            onClick={follow(nav.home)}
+            aria-label={nav.home === 0 ? `${brand.mark}, back to the top` : `${brand.mark}, the portfolio`}
+          >
             Voidbyte
           </a>
           <span className="chapter" aria-live="off">
@@ -123,15 +115,17 @@ export function Hud() {
             {title}
           </span>
           <div className="head-right">
-            <a href="#work" onClick={go('#work')}>
-              Work
-            </a>
-            <a href="#inside-sldt" onClick={go('#inside-sldt')}>
-              SLDT
-            </a>
-            <a href="#contact" onClick={go('#contact')}>
-              Contact
-            </a>
+            {nav.links.map((l) =>
+              l.external ? (
+                <a key={l.label} href={String(l.to)} target="_blank" rel="noreferrer">
+                  {l.label}
+                </a>
+              ) : (
+                <a key={l.label} href={String(l.to)} onClick={follow(l.to)}>
+                  {l.label}
+                </a>
+              ),
+            )}
             <button className="sound" onClick={() => audio.toggle()} aria-pressed={sound}>
               {sound ? 'sound on' : 'sound off'}
             </button>
@@ -177,7 +171,9 @@ export function Hud() {
           </span>
         </div>
       </div>
-      {sheetWidth ? <ChapterSheet open={sheetOpen} current={current} sound={sound} keyboard={fromKeyboard} onClose={closeSheet} /> : null}
+      {sheetWidth ? (
+        <ChapterSheet contents={nav.contents} open={sheetOpen} current={current} sound={sound} keyboard={fromKeyboard} onClose={closeSheet} />
+      ) : null}
     </>
   )
 }

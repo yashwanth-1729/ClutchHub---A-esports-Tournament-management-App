@@ -92,8 +92,8 @@ export const projects: Project[] = [
   {
     id: 'sldt',
     index: 'II.4',
-    title: 'SLDT',
-    kicker: 'Encrypted sync, without a server',
+    title: 'SIDS',
+    kicker: 'Server-Independent Data Sync',
     lead: 'Devices share encrypted state through storage that doesn’t know it’s a sync backend. No database, no session server, no login. The store serves bytes by path and refuses stale writes; it never sees plaintext and never holds a secret.',
     built: [
       ['Identity.', 'A recovery code is the account. Argon2id at 64 MiB turns it into two domain-separated keys, one to encrypt and one to sign.'],
@@ -133,11 +133,11 @@ export const skills: { group: string; items: string[] }[] = [
 /** The skills, typeset as a book index pointing at where each one shows up. */
 export const bookIndex: [string, string[]][] = [
   ['Animated dashboards', ['II.1']],
-  ['Argon2id', ['II.4', 'III']],
+  ['Argon2id', ['II.4', 'SIDS']],
   ['FastAPI', ['II.1']],
   ['Gesture-driven interactions', ['II.1']],
   ['Git', ['passim']],
-  ['IndexedDB', ['II.4', 'III']],
+  ['IndexedDB', ['II.4', 'SIDS']],
   ['JavaScript', ['passim']],
   ['Micro-interactions', ['this page']],
   ['Next.js', ['II.1', 'II.2', 'II.3']],
@@ -156,7 +156,7 @@ export const bookIndex: [string, string[]][] = [
   ['TypeScript', ['II.2', 'II.3', 'II.4']],
   ['UX copywriting', ['this page']],
   ['Vitest', ['II.2']],
-  ['Web Crypto API', ['II.4', 'III']],
+  ['Web Crypto API', ['II.4', 'SIDS']],
   ['Webhooks', ['II.2']],
 ]
 
@@ -165,6 +165,6 @@ export const refTarget: Record<string, string> = {
   'II.2': '#hospital',
   'II.3': '#clutchhub',
   'II.4': '#sldt',
-  III: '#inside-sldt',
+  SIDS: '/sids',
   'this page': '#top',
 }

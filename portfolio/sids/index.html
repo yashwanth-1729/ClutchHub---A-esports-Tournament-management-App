@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SIDS — Server-Independent Data Sync | Voidbyte</title>
+    <meta name="description" content="SIDS is an end-to-end-encrypted sync architecture by Yashwanth Raj Cherukuru: devices share data through any storage that can serve bytes and refuse a stale write, and the storage can read none of it. No server, no accounts, no database." />
+    <meta name="author" content="Yashwanth Raj Cherukuru" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://www.voidbyte.tech/sids" />
+    <meta name="theme-color" content="#000000" />
+    <script>document.documentElement.classList.add('js')</script>
+    <style>html.js .seo-text{display:none}</style>
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Voidbyte" />
+    <meta property="og:title" content="SIDS — Server-Independent Data Sync" />
+    <meta property="og:description" content="A darkmatter from Voidbyte: it holds everything together while staying invisible." />
+    <meta property="og:image" content="https://www.voidbyte.tech/og-sids.jpg" />
+    <meta property="og:url" content="https://www.voidbyte.tech/sids" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SIDS — Server-Independent Data Sync" />
+    <meta name="twitter:description" content="A darkmatter from Voidbyte: it holds everything together while staying invisible." />
+    <meta name="twitter:image" content="https://www.voidbyte.tech/og-sids.jpg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "@id": "https://www.voidbyte.tech/sids#sids",
+        "name": "SIDS",
+        "alternateName": ["Server-Independent Data Sync", "SLDT"],
+        "description": "End-to-end-encrypted, multi-device sync over any storage that can serve bytes by path and refuse a stale write. Argon2id identity, padded AES-256-GCM envelopes, an HMAC-signed hash-chained manifest, compare-and-swap writes and a clock-free conflict rule.",
+        "url": "https://www.voidbyte.tech/sids",
+        "codeRepository": "https://github.com/yashwanth-1729/Jarvis-V2/tree/main/jarvis-oss/sldt",
+        "programmingLanguage": "TypeScript",
+        "author": { "@type": "Person", "@id": "https://www.voidbyte.tech/#person", "name": "Yashwanth Raj Cherukuru", "url": "https://www.voidbyte.tech/" },
+        "isPartOf": { "@id": "https://www.voidbyte.tech/#website" }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <!-- What the page says, as plain text, for anything that reads before scripts run. React replaces it on load. -->
+      <main class="seo-text" style="max-width:40rem;margin:0 auto;padding:12vh 24px;color:#e8e2d4;background:#000;font:17px/1.6 system-ui,sans-serif">
+        <h1 style="font-size:28px;line-height:1.2">SIDS — Server-Independent Data Sync</h1>
+        <p>A darkmatter from Voidbyte: it holds everything together while staying invisible. Your devices share one locked notebook through storage that can’t open it. No server, no accounts, no database.</p>
+        <h2 style="font-size:20px">How it works</h2>
+        <p>One recovery code is the whole account: Argon2id at 64 MiB turns it into two keys, one to encrypt and one to sign. Every note is sealed with AES-256-GCM and padded to size buckets before it leaves the device. One HMAC-signed, numbered, hash-chained manifest lists what exists, so tampering and replay are hard stops. Writes are compare-and-swap, with backoff from 300 ms to 8 s. Clashes settle by revision, then device id, never by the clock; deletes are kept as tombstones.</p>
+        <h2 style="font-size:20px">Proof</h2>
+        <p>92 assertions across eight test files, 15 more for the stateless write relay, and 8 of 8 checks passing live against the real GitHub API. Designed and built by Yashwanth Raj Cherukuru for the open-source edition of JARVIS.</p>
+        <p><a style="color:inherit" href="https://www.voidbyte.tech/">Voidbyte — the portfolio</a> · <a style="color:inherit" href="https://github.com/yashwanth-1729/Jarvis-V2/tree/main/jarvis-oss/sldt">Source</a> · <a style="color:inherit" href="mailto:yash@voidbyte.tech">yash@voidbyte.tech</a></p>
+        <noscript><p>This page is an interactive WebGL black hole with a live protocol lab; turn on JavaScript to see it.</p></noscript>
+      </main>
+    </div>
+    <script type="module" src="/src/sids.tsx"></script>
+  </body>
+</html>

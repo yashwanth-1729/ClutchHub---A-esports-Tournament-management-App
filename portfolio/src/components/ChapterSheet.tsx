@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { audio } from '../audio/VoidAudio'
-import { FRAMES, focusTarget, getLenis, scrollToTarget, state } from '../engine/engine'
+import { FRAMES, getLenis, state } from '../engine/engine'
 import { useFrame } from '../lib/hooks'
-import { projects } from '../content'
+import { goTo, isPage, type Target } from '../lib/nav'
+import type { ChapterRow } from '../site'
 
 // a number never wraps away from its unit
 export function minutes(s: number) {
@@ -18,38 +19,6 @@ export function elapsedSentence() {
   return you < 2 ? 'Clocks start when you do.' : `For you, ${minutes(you)} have passed. Outside, ${minutes(state.outside)}.`
 }
 
-export type ChapterRow = { key: string; num: string; title: string; target: string; children?: ChapterRow[] }
-
-// The contents page. key is the section's data-frame, which also gives its depth.
-export const CONTENTS: ChapterRow[] = [
-  { key: 'about', num: 'I.', title: 'Orientation', target: '[data-frame="about"]' },
-  {
-    key: 'work',
-    num: 'II.',
-    title: 'Debris',
-    target: '#work',
-    children: projects.map((p, i) => ({ key: p.id, num: `II.${i + 1}`, title: p.title, target: `#${p.id}` })),
-  },
-  {
-    key: 'sldtIntro',
-    num: 'III.',
-    title: 'Sync without a server',
-    target: '#inside-sldt',
-    children: [
-      { key: 'protocol', num: 'III.1–5', title: 'How it works', target: '[data-frame="protocol"]' },
-      { key: 'sldtLab', num: 'III.6', title: 'A working copy', target: '[data-frame="sldtLab"]' },
-      { key: 'sldtNotes', num: 'III.7', title: 'Field notes', target: '[data-frame="sldtNotes"]' },
-    ],
-  },
-  { key: 'orbit', num: 'IV.', title: 'The photon sphere', target: '#orbit' },
-  { key: 'contact', num: 'V.', title: 'The horizon', target: '#contact' },
-]
-
-/** Every row by its section key, for the phone's running head. */
-export const ROW_BY_KEY: Record<string, ChapterRow> = Object.fromEntries(
-  CONTENTS.flatMap((r) => [r, ...(r.children ?? [])]).map((r) => [r.key, r]),
-)
-
 /** Height of the list's bottom fade; a row scrolled into view clears it. */
 const FADE = 40
 
@@ -62,6 +31,8 @@ function reveal(row: HTMLElement, list: HTMLElement) {
 }
 
 type Props = {
+  /** The page's contents: chapters, with their parts beneath. */
+  contents: ChapterRow[]
   open: boolean
   current: string
   sound: boolean
@@ -72,7 +43,7 @@ type Props = {
 }
 
 /** Phones and small tablets: the whole fall on one screen, a tap from anywhere. */
-export function ChapterSheet({ open, current, sound, keyboard, onClose }: Props) {
+export function ChapterSheet({ contents, open, current, sound, keyboard, onClose }: Props) {
   const sheet = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLElement>(null)
   const elapsed = useRef<HTMLParagraphElement>(null)
@@ -148,12 +119,16 @@ export function ChapterSheet({ open, current, sound, keyboard, onClose }: Props)
     if (elapsed.current) elapsed.current.textContent = elapsedSentence()
   })
 
-  const go = (target: string) => {
+  const go = (target: Target) => {
+    // another page: leave the sheet as it is; the next page starts fresh
+    if (isPage(target)) {
+      goTo(target)
+      return
+    }
     // Lenis ignores scrollTo while stopped, so the page is let go first
     releasePage()
     onClose(false)
-    scrollToTarget(target)
-    focusTarget(target)
+    goTo(target)
   }
 
   const row = (r: ChapterRow, sub: boolean) => {
@@ -196,7 +171,7 @@ export function ChapterSheet({ open, current, sound, keyboard, onClose }: Props)
       </div>
       <nav className="sheet-scroll" ref={list} aria-labelledby="sheet-h" data-lenis-prevent onScroll={measure} onTransitionEnd={measure}>
         <ol className="sheet-list">
-          {CONTENTS.map((c) => (
+          {contents.map((c) => (
             <li key={c.key} className="sheet-group">
               {row(c, false)}
               {c.children ? (

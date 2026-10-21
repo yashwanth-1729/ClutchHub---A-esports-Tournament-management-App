@@ -39,7 +39,7 @@ export function ProtoDiagramPhone({ step, label }: { step: number; label: string
       <g className={st([0], [1, 2, 3])}>
         <rect x="105.5" y="0.5" width="129" height="27" rx="6" className="code" />
         <text x="170" y="18.5" className="t-mono t-center">
-          SLDT:id:secret
+          SIDS:id:secret
         </text>
       </g>
       <g className={st([0])}>

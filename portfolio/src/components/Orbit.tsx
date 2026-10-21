@@ -1,6 +1,7 @@
 import { Fragment, useRef } from 'react'
 import { bookIndex, refTarget } from '../content'
-import { focusTarget, scrollToTarget, state } from '../engine/engine'
+import { state } from '../engine/engine'
+import { goTo, isPage } from '../lib/nav'
 import { COMPACT_QUERY, useFrame, useInView, useMedia } from '../lib/hooks'
 
 const ITEMS = bookIndex.map(([t]) => t)
@@ -13,12 +14,12 @@ function shadowRadiusPx() {
   return (Math.tan(Math.asin(sinA)) / Math.tan(fov / 2)) * (state.viewH / 2)
 }
 
-/** Follow an index reference: scroll to the part it names and hand focus to its heading. */
+/** Follow an index reference: scroll to the part it names and hand focus to its heading; another page is a plain link. */
 function follow(e: React.MouseEvent, r: string) {
-  e.preventDefault()
   const to = refTarget[r] === '#top' ? 0 : refTarget[r]
-  scrollToTarget(to)
-  focusTarget(to)
+  if (isPage(to)) return
+  e.preventDefault()
+  goTo(to)
 }
 
 /** The index on a phone: one column, the term on the left, a dotted leader (drawn in CSS), its references on the right. */

@@ -5,7 +5,7 @@ import { state } from '../../engine/engine'
 import { useFrame, useInView, usePhone } from '../../lib/hooks'
 
 // Real AES-256-GCM and HMAC-SHA256 through the Web Crypto API, the same
-// primitives SLDT uses. Keys are generated fresh in your tab and never leave it.
+// primitives SIDS uses. Keys are generated fresh in your tab and never leave it.
 
 const te = new TextEncoder()
 const hex = (b: ArrayBuffer | Uint8Array) =>
@@ -24,7 +24,7 @@ type View = {
   error: string
 }
 
-// As in SLDT: a 4-byte big-endian length, then the record, zero-filled to its bucket.
+// As in SIDS: a 4-byte big-endian length, then the record, zero-filled to its bucket.
 const BUCKETS = [256, 1024, 4096]
 function pad(text: string) {
   const body = te.encode(text)

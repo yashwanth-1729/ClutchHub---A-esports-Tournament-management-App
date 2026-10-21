@@ -108,7 +108,7 @@ export function SldtLab() {
       return
     }
     L.id = id
-    L.prefix = `sldt/${id.datasetId.slice(0, 10)}`
+    L.prefix = `sids/${id.datasetId.slice(0, 10)}`
     L.keys = keys
     push({ text: `Argon2id, ${keys.memoryKiB / 1024} MiB, ${ARGON.iterations} passes: 64 bytes in ${Math.round(keys.ms)} ms, split into an AES key and an HMAC key`, cls: 'ok' })
     setPhase('ready')
@@ -381,7 +381,7 @@ export function SldtLab() {
           <p className="lab-col-head">
             <i>The store</i> <span className="lab-aside">a public repository, in real life</span>
           </p>
-          <p className="lab-path mono">{L.prefix || 'sldt/…'}/manifest.json</p>
+          <p className="lab-path mono">{L.prefix || 'sids/…'}/manifest.json</p>
           {manifest ? (
             <p className={`lab-file mono ${attacked === 'forge' || attacked === 'rollback' ? 'hot' : ''}`}>
               r{manifest.data.revision}, signature {manifest.signature.slice(0, 12)}…

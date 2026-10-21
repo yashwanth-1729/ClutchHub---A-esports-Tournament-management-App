@@ -22,5 +22,11 @@
       "destination": "https://www.voidbyte.tech/:path*",
       "permanent": true
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/sids",
+      "destination": "/sids/index.html"
+    }
   ]
 }

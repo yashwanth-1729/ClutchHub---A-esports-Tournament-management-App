@@ -18,12 +18,18 @@ export const FRAMES: Record<string, CameraFrame> = {
   hospital: { r: 14.5, az: 2.3, el: -0.16, roll: -0.1, sx: 0.62, sy: 0.26, fov: 0.95, name: 0, dim: 0.3, heat: 0.38 },
   clutchhub: { r: 12.5, az: 3.0, el: 0.22, roll: 0.12, sx: -0.6, sy: 0.24, fov: 1.0, name: 0, dim: 0.3, heat: 0.48 },
   sldt: { r: 10.5, az: 3.75, el: -0.18, roll: -0.14, sx: 0.6, sy: -0.26, fov: 1.05, name: 0, dim: 0.3, heat: 0.58 },
-  sldtIntro: { r: 9.6, az: 4.1, el: 0.42, roll: -0.08, sx: 0.62, sy: 0.05, fov: 1.05, name: 0, dim: 0.34, heat: 0.64 },
-  protocol: { r: 8.8, az: 4.4, el: 0.3, roll: 0.1, sx: -0.6, sy: 0.32, fov: 1.05, name: 0, dim: 0.2, heat: 0.68 },
-  sldtLab: { r: 8.2, az: 4.7, el: 0.62, roll: 0, sx: 0, sy: -0.62, fov: 1.1, name: 0, dim: 0.16, heat: 0.72 },
-  sldtNotes: { r: 7.6, az: 5.0, el: -0.2, roll: -0.1, sx: 0.58, sy: 0.22, fov: 1.1, name: 0, dim: 0.24, heat: 0.76 },
+  // the homepage's door to SIDS
+  sidsDoor: { r: 9.6, az: 4.1, el: 0.42, roll: -0.08, sx: 0.62, sy: 0.05, fov: 1.05, name: 0, dim: 0.34, heat: 0.64 },
   orbit: { r: 6.4, az: 5.45, el: 0.16, roll: 0, sx: 0, sy: 0, fov: 1.2, name: 0, dim: 0.72, heat: 0.84 },
   contact: { r: 3.1, az: 6.1, el: 0.05, roll: 0, sx: 0, sy: 0, fov: 1.5, name: 0, dim: 1, heat: 1 },
+
+  // The SIDS page: a second fall, from the same distance as the first, with its own name on the plate.
+  sidsHero: { r: 30, az: 0, el: 0.1, roll: 0, sx: 0, sy: 0.02, fov: 0.95, name: 1, dim: 1, heat: 0.1 },
+  sidsWhy: { r: 17, az: 1.2, el: 0.34, roll: -0.1, sx: 0.58, sy: -0.06, fov: 1.0, name: 0, dim: 0.3, heat: 0.4 },
+  protocol: { r: 11, az: 2.3, el: 0.3, roll: 0.1, sx: -0.6, sy: 0.32, fov: 1.05, name: 0, dim: 0.2, heat: 0.56 },
+  sidsLab: { r: 8.2, az: 3.2, el: 0.62, roll: 0, sx: 0, sy: -0.62, fov: 1.1, name: 0, dim: 0.16, heat: 0.68 },
+  sidsNotes: { r: 6.6, az: 4.0, el: -0.2, roll: -0.1, sx: 0.58, sy: 0.22, fov: 1.1, name: 0, dim: 0.24, heat: 0.78 },
+  sidsEnd: { r: 3.4, az: 5.0, el: 0.05, roll: 0, sx: 0, sy: 0, fov: 1.45, name: 0, dim: 0.85, heat: 0.95 },
 }
 
 const KEYS = Object.keys(FRAMES.hero) as (keyof CameraFrame)[]
@@ -182,7 +188,12 @@ export function forceQuality(q: number | null) {
 
 export type Engine = { destroy: () => void; renderer: BlackHole | null; replate: () => void }
 
-export function startEngine(canvas: HTMLCanvasElement | null): Engine {
+export type EngineOptions = {
+  /** The word on the plate behind the hole: the author's first name unless a page names itself. */
+  name?: string
+}
+
+export function startEngine(canvas: HTMLCanvasElement | null, opts: EngineOptions = {}): Engine {
   const root = document.documentElement
   let renderer: BlackHole | null = null
 
@@ -207,7 +218,7 @@ export function startEngine(canvas: HTMLCanvasElement | null): Engine {
   let portrait = state.viewW / state.viewH < 0.9
   const plate = () => {
     if (!renderer) return
-    const p = drawNamePlate(brand.first, portrait)
+    const p = drawNamePlate(opts.name ?? brand.first, portrait)
     renderer.setName(p.canvas, p.halfW, p.halfH, p.z, p.y)
   }
   plate()
