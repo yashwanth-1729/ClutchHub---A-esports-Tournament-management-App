@@ -76,6 +76,9 @@ const RAW = {
   nvidia_slm: { title: 'Small Language Models are the Future of Agentic AI', publisher: 'Belcak et al. (NVIDIA), arXiv 2506.02153', date: '2025-06-02', url: 'https://arxiv.org/abs/2506.02153' },
   indiaai_pib: { title: 'Democratising AI in India', publisher: 'Press Information Bureau, Govt. of India', date: '2026-02-10', url: 'https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc2026210784401.pdf' },
 
+  slora: { title: 'S-LoRA: Serving Thousands of Concurrent LoRA Adapters', publisher: 'Sheng et al., arXiv 2311.03285', date: '2023-11-06', url: 'https://arxiv.org/abs/2311.03285' },
+  samsung990: { title: 'Samsung 990 PRO NVMe SSD specifications (up to 7,450 MB/s read)', publisher: 'Samsung Semiconductor', date: '2022-10', url: 'https://semiconductor.samsung.com/consumer-storage/internal-ssd/990-pro/' },
+
   // measurement
   rethink_contam: { title: 'Rethinking Benchmark and Contamination for Language Models with Rephrased Samples', publisher: 'Yang et al., arXiv 2311.04850', date: '2023-11-08', url: 'https://arxiv.org/abs/2311.04850' },
   swe_illusion: { title: 'The SWE-Bench Illusion', publisher: 'Liang et al., arXiv 2506.12286', date: '2025-06-14', url: 'https://arxiv.org/abs/2506.12286' },

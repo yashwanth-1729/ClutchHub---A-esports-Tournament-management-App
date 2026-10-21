@@ -216,6 +216,34 @@ All prices were read on 21 Oct 2026 from Indian retailers' own pages.
 - Hosted open-weight models are cheaper still.
 - The case for owning rests on privacy, control and fixed cost, not price alone.
 
+## E2. Company savings: many specialists on one workstation
+
+**Architecture (a target).** A router sends each request to a local specialist or escalates it to a frontier API. Specialists are LoRA adapters on one shared 4-bit base model; serving thousands of adapters on one base is shown by S-LoRA (arXiv 2311.03285).
+
+**Adapter size (calculated).** Rank-16 LoRA on every attention and MLP projection of the Qwen2.5-32B shape (hidden 5120, KV 1024, MLP 27648, 64 layers) has about 134M parameters, which is ≈ 0.27 GB at 16-bit.
+
+**Formulas (calculated)**
+- API cost per month = developers × requests per day × 22 working days × (tokens read × input price + tokens written × output price) × ₹95/US$. List prices are used, with no caching discounts.
+- Seconds per local request = tokens read ÷ 2,931 tok/s + tokens written ÷ 61.4 tok/s, for Qwen3-32B Q4 on an RTX 5090 (Hardware Corner).
+  - The RTX PRO 6000 is assumed to match these speeds (same 1,792 GB/s bandwidth).
+- Workstations needed = ceil(local requests per day × seconds per request ÷ (hours per day × 3600)). Each machine serves one request at a time; batching is unmeasured, so it is excluded, which overstates the hardware needed.
+- Owned cost per month = per machine (capex ÷ 48 + 4% of capex a year ÷ 12 + electricity).
+- Saving = all-API cost − (API share × all-API cost + owned cost).
+
+**Example: the page defaults (assumptions)**
+
+Inputs: 50 developers, 100 requests a day, 8,000 tokens read and 800 written per request, 80% handled locally, replacing Claude Opus 5.5.
+
+Results:
+- **Cost:** about ₹5.0 L a month all-API, against about ₹1.7 L hybrid.
+- **Hardware:** 2 RTX 5090 workstations.
+- **Saving:** about ₹3.3 L a month, with payback in about 9 months.
+
+**How the result changes**
+- With 25 developers replacing Claude Sonnet 5.5, the saving almost disappears.
+- **The saving depends on volume and on which API is replaced.**
+- Whether a specialist can actually handle 80% of requests is unproven. Establishing it is the purpose of VOIDS.
+
 ## F. Commercial case
 
 **Developers**

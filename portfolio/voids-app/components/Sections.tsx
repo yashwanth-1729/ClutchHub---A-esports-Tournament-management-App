@@ -207,7 +207,7 @@ export function Closing() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,#030303_80%)]" />
       <div className="relative z-10 flex flex-col items-center">
         <p className="label mb-8">
-          <span className="mr-3 text-warm">12</span>Closing
+          <span className="mr-3 text-warm">13</span>Closing
         </p>
         <h2 className="display max-w-[18ch] text-[clamp(36px,5.4vw,88px)] leading-[0.98] font-[720]">The Future of AI Doesn’t Have to Be Bigger.</h2>
         <p className="display mt-6 text-[clamp(24px,3vw,46px)] leading-tight font-[600] text-warm">It Has to Be Better at What Matters.</p>

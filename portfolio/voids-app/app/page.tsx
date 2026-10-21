@@ -1,4 +1,5 @@
 import { Deck, type DeckSection } from '@/components/Deck'
+import { CompanySavings } from '@/components/CompanySavings'
 import { Economics } from '@/components/Economics'
 import { EvidenceExplorer } from '@/components/EvidenceExplorer'
 import { GpuCalculator } from '@/components/GpuCalculator'
@@ -22,6 +23,7 @@ const SECTIONS: DeckSection[] = [
   { id: 'local', title: 'Local intelligence' },
   { id: 'infrastructure', title: 'Owning GPUs' },
   { id: 'economics', title: 'Economics' },
+  { id: 'savings', title: 'Company savings' },
   { id: 'measured', title: 'Measured' },
   { id: 'commercial', title: 'Commercial' },
   { id: 'closing', title: 'Closing' },
@@ -122,8 +124,19 @@ export default function Page() {
       </Slide>
 
       <Slide
-        id="measured"
+        id="savings"
         n="10"
+        label="What a company saves"
+        title="Many specialists on one machine. The frontier only when it’s needed."
+        lede="A router sends each request to the right local specialist (React, backend, SQL, tests, docs) and escalates only the hard ones to a frontier API. Set your team’s numbers; every assumption is visible."
+        sources={['slora', 'samsung990', 'hwcorner5090', 'openai_pricing', 'anthropic_pricing', 'google_pricing', 'it_5090', 'pg_pro6000', 'tg_tariff', 'fx_rate']}
+      >
+        <CompanySavings />
+      </Slide>
+
+      <Slide
+        id="measured"
+        n="11"
         label="Evaluation"
         title="Performance is measured. Not promised."
         lede="VOIDS will be judged against the model it started from, on fresh tasks it could not have seen, by code that runs. Benchmarks that leak into training are worthless: OpenAI stopped reporting SWE-bench Verified in 2026 for exactly this reason."
@@ -134,7 +147,7 @@ export default function Page() {
 
       <Slide
         id="commercial"
-        n="11"
+        n="12"
         label="Commercial potential"
         title="A large, checkable market that cannot send its code away."
         lede="Demand, privacy pressure and India’s developer base, from the sources themselves. Forecasts are labelled as forecasts."
