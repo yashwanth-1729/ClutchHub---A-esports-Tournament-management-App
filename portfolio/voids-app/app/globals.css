@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+/* Voidbyte: one family in three voices, near-black, a warm light for what we build
+   and a cool graphite-blue for the general-purpose systems we compare against. */
+@theme {
+  --font-display: 'Hubot Sans Variable', 'Mona Sans Variable', system-ui, sans-serif;
+  --font-sans: 'Mona Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Monaspace Neon', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --color-void: #030303;
+  --color-ink: rgb(232 226 212);
+  --color-ink-2: rgb(232 226 212 / 0.72);
+  --color-ink-3: rgb(232 226 212 / 0.5);
+  --color-rule: rgb(232 226 212 / 0.14);
+  --color-panel: rgb(14 14 16 / 0.72);
+  --color-warm: #ff9a52;
+  --color-warm-2: #ffd2a8;
+  --color-cool: #8fa3ff;
+  --color-cool-2: #5a6bb8;
+  --color-ok: #7fd6a4;
+  --color-warn: #ffcf6e;
+  --color-bad: #ff6b5e;
+}
+
+:root {
+  color-scheme: dark;
+}
+html {
+  background: var(--color-void);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body {
+  font-family: var(--font-sans);
+  background: var(--color-void);
+}
+i,
+em {
+  font-style: normal;
+}
+::selection {
+  background: rgb(255 154 82 / 0.35);
+}
+
+/* display type: Hubot at its widest */
+.display {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+}
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+.num {
+  font-family: var(--font-sans);
+  font-stretch: 125%;
+  font-variant-numeric: lining-nums;
+}
+
+/* presentation mode: one section per screen, snapping */
+html.present {
+  scroll-snap-type: y proximity;
+  scrollbar-width: none;
+}
+html.present::-webkit-scrollbar {
+  display: none;
+}
+html.present .slide {
+  scroll-snap-align: start;
+  min-height: 100svh;
+}
+
+/* the faint grid of a lab notebook behind everything */
+.grid-bg {
+  background-image:
+    linear-gradient(rgb(232 226 212 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(232 226 212 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+input[type='range'] {
+  accent-color: var(--color-warm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

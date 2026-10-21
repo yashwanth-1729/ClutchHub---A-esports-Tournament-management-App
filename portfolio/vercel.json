@@ -8,6 +8,15 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    },
+    {
+      "source": "/voids/_next/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ],
   "redirects": [
@@ -27,6 +36,10 @@
     {
       "source": "/sids",
       "destination": "/sids/index.html"
+    },
+    {
+      "source": "/voids",
+      "destination": "/voids/index.html"
     }
   ]
 }
