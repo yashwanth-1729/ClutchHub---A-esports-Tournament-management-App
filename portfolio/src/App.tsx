@@ -24,9 +24,21 @@ export default function App() {
     let cleanup = () => {}
     let alive = true
 
-    // the debris layer is heavier, so it loads while the loader counts
+    // The debris layer is heavy to load and compile, so it waits until the count has
+    // landed on 30: done mid-count it stalls the falling numbers; done after, the
+    // screen is still and nothing is seen to stop.
+    const whenCounted = new Promise<void>((resolve) => {
+      const off = onFrame(() => {
+        if (state.approach < 1) return
+        off()
+        const idle = (window as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback
+        if (idle) idle(() => resolve(), { timeout: 400 })
+        else setTimeout(resolve, 60)
+      })
+    })
     if (state.webgl && debrisCanvas.current) {
-      import('./gl/Debris')
+      whenCounted
+        .then(() => import('./gl/Debris'))
         .then(({ Debris }) => {
           if (!alive || !debrisCanvas.current) return
           const debris = new Debris(debrisCanvas.current)

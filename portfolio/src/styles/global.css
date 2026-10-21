@@ -322,7 +322,8 @@ button {
   align-self: end;
   justify-self: end;
   max-width: 24rem;
-  margin: 0 0 120px;
+  /* room for the Enter button and its note, which share this cell */
+  margin: 0 0 160px;
   font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--fg-2);
@@ -369,11 +370,43 @@ button {
   font-family: var(--display);
   font-stretch: 125%;
   font-weight: 600;
-  font-size: var(--fs-caps);
-  letter-spacing: 0.08em;
+  font-size: var(--fs-lede);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-top: 1px solid rgb(var(--ink) / 0.4);
+  padding-top: 18px;
+  border-top: 1px solid rgb(var(--ink) / 0.6);
   transition: color 0.3s;
+}
+/* once in orbit, a streak of light keeps running along the rule: the way in */
+.enter-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 32%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--pencil), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+.is-counted .enter-btn::after {
+  opacity: 1;
+  animation: enter-sweep 2.8s var(--ease) 0.6s infinite;
+}
+/* from end to end of the rule, never past it */
+@keyframes enter-sweep {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(212%);
+    opacity: 0;
+  }
 }
 /* the rule fills with light on hover */
 .enter-btn::before {
@@ -399,6 +432,19 @@ button {
 .enter-arrow {
   font-family: var(--text);
   transition: transform 0.6s var(--ease);
+}
+.is-counted .enter-btn:not(:hover):not(:focus-visible) .enter-arrow {
+  animation: enter-nudge 2.8s var(--ease) 0.6s infinite;
+}
+@keyframes enter-nudge {
+  0%,
+  45%,
+  100% {
+    transform: none;
+  }
+  22% {
+    transform: translateX(8px);
+  }
 }
 .enter-btn:hover .enter-arrow,
 .enter-btn:focus-visible .enter-arrow {
@@ -1333,6 +1379,10 @@ figcaption b {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .is-counted .enter-btn::after,
+  .is-counted .enter-btn .enter-arrow {
+    animation: none;
+  }
   .grain,
   .cue-line {
     animation: none;
