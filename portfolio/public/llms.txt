@@ -1,0 +1,21 @@
+# Yashwanth Raj Cherukuru — Voidbyte
+
+> Portfolio of Yashwanth Raj Cherukuru, a full-stack developer and UI/UX designer from India. He builds whole products: the interface people touch and the APIs, locks, queues and cryptography underneath. Second-year B.Tech in Computer Science at KL University (graduating 2029). Open to remote freelance work and internships. Voidbyte is his studio name; the site at https://www.voidbyte.tech is an interactive WebGL black hole you scroll into.
+
+## Contact
+
+- Email: yash@voidbyte.tech
+- GitHub: https://github.com/yashwanth-1729
+- Instagram: https://www.instagram.com/yashwanthbuilds/
+- Résumé: https://www.voidbyte.tech/resume.pdf
+
+## Projects
+
+- [JARVIS](https://github.com/yashwanth-1729/Jarvis-V2): a voice-first command center for Windows and Android, built alone. An agent loop over twenty-three tools for tasks, schedules, notes and memories; streaming speech in English, Telugu and Hindi; typed long-term memory with ranked retrieval; a Three.js mascot. Next.js, FastAPI, Tauri v2, Three.js, Kotlin.
+- [Hospital Automation](https://github.com/yashwanth-1729/Hospital-Automation-System): patient and staff interfaces, API webhooks and a PostgreSQL-backed worker that books, reminds and follows up. Idempotent intake and transactional slot locking; tested with Vitest. Next.js, TypeScript, PostgreSQL, Node.js.
+- [ClutchHub](https://github.com/yashwanth-1729/ClutchHub-frontend): a Free Fire esports tournament platform with team registration, messaging, match scoring and live leaderboards (kills plus placement points). Next.js, React, TypeScript, Supabase.
+- [SLDT](https://github.com/yashwanth-1729/Jarvis-V2/tree/main/jarvis-oss/sldt): an architecture he designed for encrypted sync without a server. A recovery code is the account (Argon2id into two keys); records are padded and sealed with AES-256-GCM; a single HMAC-signed, hash-chained manifest catches tampering, replay and rollback; compare-and-swap writes with backoff; conflicts settle by revision then device id, never by clock.
+
+## Skills
+
+React, Next.js, TypeScript, JavaScript, Three.js / WebGL, Node.js, FastAPI, Python, REST APIs, PostgreSQL, SQL, Supabase, IndexedDB, Web Crypto API, streaming audio, webhooks, Vitest, Git. Interface work: onboarding flows, animated dashboards, gesture-driven interactions, micro-interactions, mobile-first layouts, UX copywriting, reduced-motion accessibility.
