@@ -1,10 +1,12 @@
 'use client'
 
+import { useCallback, useState } from 'react'
 import { motion } from 'motion/react'
 import { ArrowRight, Mail } from 'lucide-react'
 import { FRONTIER } from '@/data/models'
 import { API_PRICES, APPLICATIONS, DEMAND, INDIA, PRIVACY, PROBLEM_FACTS, RISKS, type Fact } from '@/data/market'
 import { PRECISIONS, weightsGB } from '@/lib/memory'
+import { BlackHoleHero } from './BlackHoleHero'
 import { Concentration } from './Concentration'
 import { Cite, Tag } from './Slide'
 
@@ -12,37 +14,55 @@ const BF16 = PRECISIONS.find((p) => p.id === 'bf16')!
 const Q4 = PRECISIONS.find((p) => p.id === 'q4')!
 
 export function Hero() {
+  // null until we know; true when the WebGL black hole is drawing the name itself
+  const [webgl, setWebgl] = useState<boolean | null>(null)
+  const onReady = useCallback((ok: boolean) => setWebgl(ok), [])
+  const hole = webgl === true
+  const late = (d: number) => (hole ? d + 4.6 : d) // under the black hole, the words wait for the disk to light
+
   return (
-    <section id="hero" className="slide relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-5 text-center">
-      <Concentration className="absolute inset-0 h-full w-full" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#030303_85%)]" />
-      <div className="relative z-10 flex flex-col items-center">
-        <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.8 }} className="label mb-6">
-          A Voidbyte research programme
-        </motion.p>
-        <motion.h1
-          initial={{ opacity: 0, letterSpacing: '0.3em' }}
-          animate={{ opacity: 1, letterSpacing: '-0.02em' }}
-          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-          className="display text-[clamp(84px,17vw,260px)] leading-[0.85] font-[780] text-ink"
-        >
-          VOIDS
-        </motion.h1>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7, duration: 0.8 }} className="display mt-4 text-[clamp(16px,2vw,26px)] font-[500] text-warm-2">
+    <section id="hero" className="slide relative flex min-h-svh flex-col items-center overflow-hidden px-5 text-center">
+      <BlackHoleHero onReady={onReady} className={`absolute inset-0 h-full w-full transition-opacity duration-700 ${hole ? 'opacity-100' : 'opacity-0'}`} />
+      {webgl === false ? <Concentration className="absolute inset-0 h-full w-full" /> : null}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(3,3,3,0.7)_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-void via-void/70 to-transparent" />
+
+      {webgl === null ? null : (
+      <>
+      <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: late(0.2), duration: 0.8 }} className="label relative z-10 mt-24">
+        A Voidbyte research programme
+      </motion.p>
+
+      <div className={`relative z-10 flex flex-col items-center ${hole ? 'mt-auto mb-[9vh]' : 'my-auto'}`}>
+        {hole ? (
+          <h1 className="sr-only">VOIDS — Domain-Specialized Intelligence</h1>
+        ) : (
+          <motion.h1
+            initial={{ opacity: 0, letterSpacing: '0.3em' }}
+            animate={{ opacity: 1, letterSpacing: '-0.02em' }}
+            transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+            className="display text-[clamp(84px,17vw,260px)] leading-[0.85] font-[780] text-ink"
+          >
+            VOIDS
+          </motion.h1>
+        )}
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(0.7), duration: 0.8 }} className="display mt-4 text-[clamp(16px,2vw,26px)] font-[500] text-warm-2">
           Domain-Specialized Intelligence
         </motion.p>
-        <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0, duration: 0.8 }} className="display mt-10 text-[clamp(26px,3.6vw,54px)] leading-[1.02] font-[680]">
+        <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: late(1.0), duration: 0.8 }} className={`display leading-[1.02] font-[680] ${hole ? 'mt-5 text-[clamp(24px,2.8vw,42px)]' : 'mt-10 text-[clamp(26px,3.6vw,54px)]'}`}>
           Small by Design.
           <br />
           <span className="text-warm">Exceptional by Domain.</span>
         </motion.p>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3, duration: 0.8 }} className="mt-8 max-w-[52ch] text-[clamp(16px,1.3vw,20px)] leading-relaxed text-ink-2">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(1.3), duration: 0.8 }} className={`max-w-[52ch] text-[clamp(15px,1.2vw,19px)] leading-relaxed text-ink-2 ${hole ? 'mt-5' : 'mt-8'}`}>
           Building compact AI models designed to achieve frontier-competitive expertise in the domains that matter.
         </motion.p>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6, duration: 0.8 }} className="mt-10 font-mono text-[12px] text-ink-3">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(1.6), duration: 0.8 }} className={`font-mono text-[12px] text-ink-3 ${hole ? 'mt-5' : 'mt-10'}`}>
           Proposed: 20–30B specialized models · First: VOIDS React · No VOIDS model has been trained yet
         </motion.p>
       </div>
+      </>
+      )}
     </section>
   )
 }
