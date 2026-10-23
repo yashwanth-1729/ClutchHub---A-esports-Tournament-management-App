@@ -16,7 +16,7 @@
   .project {
     min-height: 0;
     display: block;
-    padding-top: 2svh;
+    padding-top: 8svh;
     padding-bottom: 14svh;
   }
   .project-grid {

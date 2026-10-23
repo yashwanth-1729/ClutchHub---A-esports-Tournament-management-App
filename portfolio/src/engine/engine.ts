@@ -341,6 +341,8 @@ export function startEngine(canvas: HTMLCanvasElement | null, opts: EngineOption
       drawn.fov = f.fov * 1.25
       // on a phone the name sits above the hole and the words below it
       drawn.sy += 0.04 * f.name
+      // the stacked name sits right where the first words scroll in, so it leaves sooner
+      drawn.name *= f.name * f.name
       // Phones stack the words full width over the hole, so away from the opening and the end
       // the hole stays centred, smaller and dimmer: a backdrop, never half cut off by an edge.
       const calm = Math.max(0, 1 - f.name * 2) * Math.max(0, 1 - Math.max(0, f.heat - 0.84) * 6)

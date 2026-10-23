@@ -383,6 +383,8 @@ export class Debris {
     const { vw, vh } = this
     const unit = (2 * 10 * Math.tan(THREE.MathUtils.degToRad(15))) / vh // world units per CSS px at z = 0
     const mobile = vw < 1180
+    // a phone gives each object its own band of sky above the project's name: it stays in it
+    const phone = vw <= 700
     let any = false
 
     this.key.color.setRGB(accent[0] / 255, accent[1] / 255, accent[2] / 255)
@@ -407,13 +409,13 @@ export class Debris {
       if (slot) {
         x = slot.left + slot.width / 2
         const sy = slot.top + slot.height / 2
-        y = sy + (sy - vh / 2) * 0.45
-        px = mobile ? Math.min(slot.height * 0.85, vw * 0.5) : Math.min(slot.width * 0.95, vh * 0.34)
+        y = phone ? sy : sy + (sy - vh / 2) * 0.45
+        px = phone ? Math.min(slot.height * 0.58, vw * 0.4) : mobile ? Math.min(slot.height * 0.85, vw * 0.5) : Math.min(slot.width * 0.95, vh * 0.34)
       }
       it.group.position.set((x - vw / 2) * unit, -(y - vh / 2) * unit, 0)
 
       const size = px * unit
-      const stretch = 1 + state.stretch * 1.6
+      const stretch = 1 + state.stretch * (phone ? 0.5 : 1.6)
       it.group.scale.set(size / Math.sqrt(stretch), size * stretch, size / Math.sqrt(stretch))
 
       // with reduced motion only scrolling turns them

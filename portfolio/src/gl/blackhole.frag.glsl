@@ -115,7 +115,9 @@ vec4 disk(vec3 p, vec3 dir) {
 vec4 namePlane(vec3 p) {
   vec2 uv = vec2(p.x / uPlane.y, (p.y - uPlaneY) / uPlane.z) * 0.5 + 0.5;
   if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return vec4(0.0);
-  float m = texture(uName, uv).r;
+  // explicit LOD: inside the ray loop, implicit derivatives are undefined, and phone GPUs
+  // pick a random mip per 2x2 block, which shows as dashed ghosts around the name
+  float m = textureLod(uName, uv, 0.0).r;
   vec3 c = mix(vec3(1.0, 0.94, 0.86), vec3(1.0, 0.22, 0.12), uLock);
   return vec4(c * 1.1, m * uPlane.w);
 }
