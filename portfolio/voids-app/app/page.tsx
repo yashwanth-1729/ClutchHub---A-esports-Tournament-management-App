@@ -34,7 +34,6 @@ export default function Page() {
   return (
     <Deck sections={SECTIONS}>
       <VoidBackground sections={SECTIONS.map((s) => s.id)} />
-      <div className="grid-bg pointer-events-none fixed inset-0 -z-10" />
       <Hero />
 
       <Slide

@@ -21,16 +21,11 @@ export function Hero() {
   return (
     <section id="hero" className="slide relative flex min-h-svh flex-col items-center overflow-hidden px-5 text-center">
       {webgl === false ? <Concentration className="absolute inset-0 h-full w-full" /> : null}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(3,3,3,0.7)_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-void via-void/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[34%] bg-gradient-to-t from-void/80 to-transparent" />
 
       {webgl === null ? null : (
       <>
-      <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: late(0.2), duration: 0.8 }} className="label relative z-10 mt-24">
-        A Voidbyte research programme
-      </motion.p>
-
-      <div className={`relative z-10 flex flex-col items-center ${hole ? 'mt-auto mb-[9vh]' : 'my-auto'}`}>
+      <div className={`relative z-10 flex flex-col items-center ${hole ? 'mt-auto mb-[11vh]' : 'my-auto'}`}>
         {hole ? (
           <h1 className="sr-only">VOIDS — Domain-Specialized Intelligence</h1>
         ) : (
@@ -38,24 +33,19 @@ export function Hero() {
             initial={{ opacity: 0, letterSpacing: '0.3em' }}
             animate={{ opacity: 1, letterSpacing: '-0.02em' }}
             transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-            className="display text-[clamp(84px,17vw,260px)] leading-[0.85] font-[780] text-ink"
+            className="display mb-8 text-[clamp(84px,17vw,260px)] leading-[0.85] font-[780] text-ink"
           >
             VOIDS
           </motion.h1>
         )}
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(0.7), duration: 0.8 }} className="display mt-4 text-[clamp(16px,2vw,26px)] font-[500] text-warm-2">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(0.5), duration: 1 }} className="label text-warm-2">
           Domain-Specialized Intelligence
         </motion.p>
-        <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: late(1.0), duration: 0.8 }} className={`display leading-[1.02] font-[680] ${hole ? 'mt-5 text-[clamp(24px,2.8vw,42px)]' : 'mt-10 text-[clamp(26px,3.6vw,54px)]'}`}>
-          Small by Design.
-          <br />
-          <span className="text-warm">Exceptional by Domain.</span>
+        <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: late(0.8), duration: 1 }} className="display mt-4 text-[clamp(22px,2.4vw,36px)] leading-[1.05] font-[650]">
+          Small by Design. <span className="text-warm">Exceptional by Domain.</span>
         </motion.p>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(1.3), duration: 0.8 }} className={`max-w-[52ch] text-[clamp(15px,1.2vw,19px)] leading-relaxed text-ink-2 ${hole ? 'mt-5' : 'mt-8'}`}>
-          Building compact AI models designed to achieve frontier-competitive expertise in the domains that matter.
-        </motion.p>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(1.6), duration: 0.8 }} className={`font-mono text-[12px] text-ink-3 ${hole ? 'mt-5' : 'mt-10'}`}>
-          Proposed: 20–30B specialized models · First: VOIDS React · No VOIDS model has been trained yet
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: late(1.1), duration: 1 }} className="mt-4 max-w-[46ch] text-[clamp(14px,1.05vw,17px)] leading-relaxed text-ink-3">
+          Compact AI models built for frontier-competitive expertise in the domains that matter.
         </motion.p>
       </div>
       </>

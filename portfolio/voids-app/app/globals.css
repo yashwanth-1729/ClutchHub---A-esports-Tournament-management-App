@@ -62,16 +62,8 @@ em {
   font-variant-numeric: lining-nums;
 }
 
-/* presentation mode: one section per screen, snapping */
-html.present {
-  scroll-snap-type: y proximity;
-  scrollbar-width: none;
-}
-html.present::-webkit-scrollbar {
-  display: none;
-}
-html.present .slide {
-  scroll-snap-align: start;
+/* every section takes at least a screen; scrolling stays free */
+.slide {
   min-height: 100svh;
 }
 

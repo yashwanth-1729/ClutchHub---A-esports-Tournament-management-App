@@ -12,9 +12,9 @@ type Shot = CameraFrame & { cool: number; plate?: string }
 const F = (o: Partial<Shot>): Shot => ({ r: 20, az: 0, el: 0.1, roll: 0, sx: 0, sy: 0, fov: 0.95, name: 0, dim: 0.3, heat: 0.2, cool: 0, ...o })
 
 const SHOTS: Record<string, Shot> = {
-  hero: F({ r: 30, sy: 0.1, name: 1, dim: 1, heat: 0.1, plate: 'VOIDS' }),
-  problem: F({ r: 26, az: 0.6, el: 0.32, roll: -0.1, sx: 0.58, sy: -0.06, dim: 0.42, heat: 0, cool: 1 }),
-  hypothesis: F({ r: 21, az: 1.1, el: -0.1, roll: 0.08, sx: -0.58, sy: 0.22, dim: 0.38, heat: 0.12, cool: 0.6 }),
+  hero: F({ r: 30, sy: 0.16, name: 1, dim: 1, heat: 0.1, plate: 'VOIDS' }),
+  problem: F({ r: 26, az: 0.6, el: 0.32, roll: -0.1, sx: 0.58, sy: -0.06, dim: 0.32, heat: 0, cool: 1 }),
+  hypothesis: F({ r: 21, az: 1.1, el: -0.1, roll: 0.08, sx: -0.58, sy: 0.22, dim: 0.3, heat: 0.12, cool: 0.6 }),
   evidence: F({ r: 18, az: 1.6, el: 0.22, roll: 0.12, sx: 0.62, sy: -0.24, dim: 0.28, heat: 0.22, cool: 0.3 }),
   react: F({ r: 15, az: 2.2, el: 0.14, sx: 0.42, sy: -0.3, fov: 1.0, name: 1, dim: 0.26, heat: 0.36, plate: 'REACT' }),
   technology: F({ r: 13.5, az: 2.85, el: -0.2, roll: -0.1, sx: -0.6, sy: 0.26, dim: 0.28, heat: 0.42 }),
@@ -89,8 +89,9 @@ export function VoidBackground({ sections }: { sections: string[] }) {
     const touch = matchMedia('(pointer: coarse)').matches
     bh.steps = touch ? 110 : 170
     const dpr = Math.min(devicePixelRatio || 1, 2)
-    let quality = touch ? 0.42 : 0.62
-    const fit = () => bh.resize(Math.max(0.3, Math.min(1.2, quality * dpr)))
+    // start sharp; step down only if this GPU can't keep up
+    let quality = touch ? 0.5 : 0.85
+    const fit = () => bh.resize(Math.max(0.3, Math.min(1.4, quality * dpr)))
 
     let portrait = innerWidth / innerHeight < 0.9
     let plateText = 'VOIDS'
@@ -119,16 +120,28 @@ export function VoidBackground({ sections }: { sections: string[] }) {
     }
     window.addEventListener('pointermove', onMove, { passive: true })
 
-    // the section in the middle of the screen sets the shot
-    let target = SHOTS.hero
+    // the camera is tied to the scroll: between two sections it blends their shots
     const els = sections.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) if (e.isIntersecting) target = SHOTS[e.target.id] ?? target
-      },
-      { rootMargin: '-45% 0px -45% 0px' },
-    )
-    els.forEach((el) => io.observe(el))
+    let tops: number[] = []
+    const measure = () => (tops = els.map((el) => el.getBoundingClientRect().top + scrollY))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(document.body)
+    const target: Shot = { ...SHOTS.hero }
+    const smooth = (x: number) => x * x * (3 - 2 * x)
+    const aim = () => {
+      // at the top of a section its own shot is exact; it blends into the next as you scroll on
+      const y = scrollY + 1
+      let i = 0
+      while (i < tops.length - 1 && y >= tops[i + 1]) i++
+      const a = SHOTS[els[i]?.id] ?? SHOTS.hero
+      const b = SHOTS[els[i + 1]?.id] ?? a
+      const span = (tops[i + 1] ?? tops[i] + 1) - tops[i]
+      const f = smooth(clamp((y - tops[i]) / Math.max(1, span)))
+      for (const key of KEYS) target[key] = a[key] + (b[key] - a[key]) * f
+      target.name = a.name + (b.name - a.name) * f
+      target.plate = f < 0.5 ? a.plate ?? b.plate : b.plate ?? a.plate
+    }
 
     const start = performance.now()
     const cur: Shot = { ...SHOTS.hero }
@@ -144,11 +157,12 @@ export function VoidBackground({ sections }: { sections: string[] }) {
       last = now
       const t = reduced ? 99 : (now - start) / 1000
 
-      // ease every value toward the current section's shot
-      const k = reduced ? 1 : 1 - Math.exp(-dt * 1.6)
+      // follow the scroll closely, with just enough lag to feel like a camera
+      aim()
+      const k = reduced ? 1 : 1 - Math.exp(-dt * 7)
       for (const key of KEYS) cur[key] += (target[key] - cur[key]) * k
       // the name fades out before its word changes, then back in
-      const want = target.plate && target.name > 0 ? target.plate : plateText
+      const want = target.plate ?? plateText
       const nameTarget = want !== plateText ? 0 : target.name
       cur.name += (nameTarget - cur.name) * k
       if (want !== plateText && cur.name < 0.03) {
@@ -182,6 +196,9 @@ export function VoidBackground({ sections }: { sections: string[] }) {
         if (ema > 24 && quality > 0.3) {
           quality *= 0.85
           fit()
+        } else if (ema < 14 && quality < (touch ? 0.6 : 1)) {
+          quality = Math.min(touch ? 0.6 : 1, quality * 1.08)
+          fit()
         }
       }
     }
@@ -189,7 +206,7 @@ export function VoidBackground({ sections }: { sections: string[] }) {
 
     return () => {
       cancelAnimationFrame(raf)
-      io.disconnect()
+      ro.disconnect()
       window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onMove)
       bh.dispose()
