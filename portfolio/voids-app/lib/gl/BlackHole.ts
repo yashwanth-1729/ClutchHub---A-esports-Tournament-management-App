@@ -16,6 +16,7 @@ export type CameraFrame = {
   name: number // opacity of the name written behind the hole
   dim: number
   heat: number
+  cool?: number // VOIDS only: 0 warm .. 1 cold blue
 }
 
 export type FrameUniforms = {
@@ -31,7 +32,7 @@ type Uniforms = Record<string, WebGLUniformLocation | null>
 
 const NAMES = [
   'uRes', 'uTime', 'uCamPos', 'uCamFwd', 'uCamRight', 'uCamUp', 'uTanFov', 'uShift', 'uMouse',
-  'uName', 'uPlane', 'uHeat', 'uLock', 'uDim', 'uIntro', 'uFlash', 'uSteps', 'uSky', 'uPlaneY',
+  'uName', 'uPlane', 'uHeat', 'uLock', 'uDim', 'uIntro', 'uFlash', 'uSteps', 'uSky', 'uPlaneY', 'uCool',
 ]
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string) {
@@ -208,6 +209,7 @@ export class BlackHole {
     gl.uniform1f(u.uFlash, k.flash)
     gl.uniform1i(u.uSteps, this.steps)
     gl.uniform1f(u.uSky, k.sky)
+    gl.uniform1f(u.uCool, f.cool ?? 0)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
   }
 

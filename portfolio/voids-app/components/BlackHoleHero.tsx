@@ -1,11 +1,33 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { BlackHole, type CameraFrame } from '@/lib/gl/BlackHole'
+import { setWebgl } from '@/lib/gl/status'
 
-// The homepage's opening, retold for VOIDS: fall from r = 1729 to r = 30, then the disk ignites
-// and the name, written on a plane behind the hole, bends around it.
-const HERO: CameraFrame = { r: 30, az: 0, el: 0.1, roll: 0, sx: 0, sy: 0.1, fov: 0.95, name: 1, dim: 1, heat: 0.1 }
+// The homepage's black hole as the backdrop for the whole talk. It opens with the same fall from
+// r = 1729, then the camera moves for each section and falls closer as the argument builds.
+// What only VOIDS does: the hole runs cold blue on the slides about general-purpose AI and burns
+// warm on the specialist slides, and the lensed name behind it becomes the domain on VOIDS React.
+type Shot = CameraFrame & { cool: number; plate?: string }
+const F = (o: Partial<Shot>): Shot => ({ r: 20, az: 0, el: 0.1, roll: 0, sx: 0, sy: 0, fov: 0.95, name: 0, dim: 0.3, heat: 0.2, cool: 0, ...o })
+
+const SHOTS: Record<string, Shot> = {
+  hero: F({ r: 30, sy: 0.1, name: 1, dim: 1, heat: 0.1, plate: 'VOIDS' }),
+  problem: F({ r: 26, az: 0.6, el: 0.32, roll: -0.1, sx: 0.58, sy: -0.06, dim: 0.42, heat: 0, cool: 1 }),
+  hypothesis: F({ r: 21, az: 1.1, el: -0.1, roll: 0.08, sx: -0.58, sy: 0.22, dim: 0.38, heat: 0.12, cool: 0.6 }),
+  evidence: F({ r: 18, az: 1.6, el: 0.22, roll: 0.12, sx: 0.62, sy: -0.24, dim: 0.28, heat: 0.22, cool: 0.3 }),
+  react: F({ r: 15, az: 2.2, el: 0.14, sx: 0.42, sy: -0.3, fov: 1.0, name: 1, dim: 0.26, heat: 0.36, plate: 'REACT' }),
+  technology: F({ r: 13.5, az: 2.85, el: -0.2, roll: -0.1, sx: -0.6, sy: 0.26, dim: 0.28, heat: 0.42 }),
+  local: F({ r: 12, az: 3.45, el: 0.26, roll: 0.1, sx: 0.62, sy: -0.26, dim: 0.24, heat: 0.48 }),
+  infrastructure: F({ r: 11, az: 4.0, el: -0.16, roll: -0.12, sx: -0.62, sy: -0.22, dim: 0.24, heat: 0.54 }),
+  economics: F({ r: 10, az: 4.5, el: 0.3, sx: 0.6, sy: 0.26, fov: 1.05, dim: 0.22, heat: 0.6 }),
+  savings: F({ r: 9, az: 4.95, el: -0.12, roll: 0.1, sx: -0.6, sy: 0.22, fov: 1.05, dim: 0.24, heat: 0.66 }),
+  measured: F({ r: 8, az: 5.35, el: 0.6, sy: -0.62, fov: 1.1, dim: 0.2, heat: 0.72 }),
+  commercial: F({ r: 6.6, az: 5.8, el: -0.2, roll: -0.1, sx: 0.58, sy: 0.22, fov: 1.1, dim: 0.24, heat: 0.8 }),
+  closing: F({ r: 3.4, az: 6.25, el: 0.05, fov: 1.45, dim: 0.85, heat: 0.95 }),
+}
+const KEYS = ['r', 'az', 'el', 'roll', 'sx', 'sy', 'fov', 'dim', 'heat', 'cool'] as const
+
 const FROM = 1729
 const APPROACH_S = 3.2
 const IGNITE_AT = 2.6
@@ -22,8 +44,8 @@ function loadFont() {
   return fontLoading
 }
 
-/** The name, white on black, sized for the plane the shader places behind the hole. */
-function plate(portrait: boolean) {
+/** A word, white on black, sized for the plane the shader places behind the hole. */
+function plate(text: string, portrait: boolean) {
   const W = portrait ? 1400 : 2400
   const lineH = portrait ? 480 : 420
   const H = lineH + (portrait ? 80 : 60)
@@ -37,10 +59,10 @@ function plate(portrait: boolean) {
   ctx.textAlign = 'center'
   let size = lineH
   ctx.font = `780 ${size}px "${FAMILY}", "Hubot Sans Variable", sans-serif`
-  size *= Math.min(1, (W * 0.94) / ctx.measureText('VOIDS').width)
+  size *= Math.min(1, (W * 0.94) / ctx.measureText(text).width)
   ctx.font = `780 ${size}px "${FAMILY}", "Hubot Sans Variable", sans-serif`
   const cap = ctx.measureText('H').actualBoundingBoxAscent
-  ctx.fillText('VOIDS', W / 2, H / 2 + cap / 2)
+  ctx.fillText(text, W / 2, H / 2 + cap / 2)
   const halfW = portrait ? 7 : 31
   return { c, halfW, halfH: halfW * (H / W), z: 15, y: portrait ? 8.5 : 0 }
 }
@@ -48,97 +70,131 @@ function plate(portrait: boolean) {
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 const clamp = (v: number) => Math.min(1, Math.max(0, v))
 
-/** Returns whether WebGL is running, so the page can hide its HTML fallback title. */
-export function BlackHoleHero({ className = '', onReady }: { className?: string; onReady?: (webgl: boolean) => void }) {
+/** Fixed behind every section; follows whichever section holds the middle of the screen. */
+export function VoidBackground({ sections }: { sections: string[] }) {
   const ref = useRef<HTMLCanvasElement>(null)
-  const [lit, setLit] = useState(false)
 
   useEffect(() => {
     const canvas = ref.current
-    if (!canvas || !BlackHole.supported()) return onReady?.(false)
+    if (!canvas || !BlackHole.supported()) return setWebgl(false)
     let bh: BlackHole
     try {
       bh = new BlackHole(canvas)
     } catch {
-      return onReady?.(false)
+      return setWebgl(false)
     }
-    onReady?.(true)
+    setWebgl(true)
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
     const touch = matchMedia('(pointer: coarse)').matches
     bh.steps = touch ? 110 : 170
     const dpr = Math.min(devicePixelRatio || 1, 2)
-    const scale = Math.max(0.3, Math.min(1.2, (touch ? 0.42 : 0.62) * dpr))
+    let quality = touch ? 0.42 : 0.62
+    const fit = () => bh.resize(Math.max(0.3, Math.min(1.2, quality * dpr)))
 
-    let portrait = canvas.clientWidth / canvas.clientHeight < 0.9
+    let portrait = innerWidth / innerHeight < 0.9
+    let plateText = 'VOIDS'
     const setPlate = () => {
-      const p = plate(portrait)
+      const p = plate(plateText, portrait)
       bh.setName(p.c, p.halfW, p.halfH, p.z, p.y)
     }
     setPlate()
     loadFont().then(setPlate, () => {})
-    bh.resize(scale)
+    fit()
+
+    const onResize = () => {
+      const now = innerWidth / innerHeight < 0.9
+      if (now !== portrait) {
+        portrait = now
+        setPlate()
+      }
+      fit()
+    }
+    window.addEventListener('resize', onResize)
 
     const mouse = { x: 0, y: 0, on: 0 }
     const onMove = (e: PointerEvent) => {
-      const r = canvas.getBoundingClientRect()
-      mouse.x = (e.clientX - r.left - r.width / 2) / r.height
-      mouse.y = -(e.clientY - r.top - r.height / 2) / r.height
+      mouse.x = (e.clientX - innerWidth / 2) / innerHeight
+      mouse.y = -(e.clientY - innerHeight / 2) / innerHeight
     }
     window.addEventListener('pointermove', onMove, { passive: true })
 
-    const ro = new ResizeObserver(() => {
-      const nowPortrait = canvas.clientWidth / canvas.clientHeight < 0.9
-      if (nowPortrait !== portrait) {
-        portrait = nowPortrait
-        setPlate()
-      }
-      bh.resize(scale)
-    })
-    ro.observe(canvas)
-
-    // draw only while the opening is on screen
-    let visible = true
-    const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting))
-    io.observe(canvas)
+    // the section in the middle of the screen sets the shot
+    let target = SHOTS.hero
+    const els = sections.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) target = SHOTS[e.target.id] ?? target
+      },
+      { rootMargin: '-45% 0px -45% 0px' },
+    )
+    els.forEach((el) => io.observe(el))
 
     const start = performance.now()
-    const f: CameraFrame = { ...HERO }
+    const cur: Shot = { ...SHOTS.hero }
+    const out: Shot = { ...SHOTS.hero }
     let raf = 0
-    let litSent = false
-    const tick = () => {
+    let last = start
+    let ema = 16.7
+    let checkIn = 0
+    const tick = (now: number) => {
       raf = requestAnimationFrame(tick)
-      if (!visible || bh.lost) return
-      const t = reduced ? 99 : (performance.now() - start) / 1000
+      if (bh.lost) return
+      const dt = Math.min(0.1, (now - last) / 1000)
+      last = now
+      const t = reduced ? 99 : (now - start) / 1000
+
+      // ease every value toward the current section's shot
+      const k = reduced ? 1 : 1 - Math.exp(-dt * 1.6)
+      for (const key of KEYS) cur[key] += (target[key] - cur[key]) * k
+      // the name fades out before its word changes, then back in
+      const want = target.plate && target.name > 0 ? target.plate : plateText
+      const nameTarget = want !== plateText ? 0 : target.name
+      cur.name += (nameTarget - cur.name) * k
+      if (want !== plateText && cur.name < 0.03) {
+        plateText = want
+        setPlate()
+      }
+
+      // the opening fall, laid over the hero shot
       const e = ease(clamp(t / APPROACH_S))
       const intro = ease(clamp((t - IGNITE_AT) / IGNITE_S))
-      const k = 1 - e
-      Object.assign(f, HERO)
-      if (portrait) f.sy = 0.02
-      // log-spaced so the hole grows at a steady visual rate
-      f.r = Math.exp(Math.log(FROM) * k + Math.log(HERO.r) * e)
-      f.az = HERO.az - 0.42 * k + (reduced ? 0 : 0.035 * Math.sin(t * 0.12) * intro)
-      f.el = HERO.el + 0.22 * k
-      f.roll = 0.1 * k
-      f.name = clamp((intro - 0.3) / 0.6)
-      if (!litSent && intro > 0.55) {
-        litSent = true
-        setLit(true)
+      const a = 1 - e
+      Object.assign(out, cur)
+      out.r = Math.exp(Math.log(FROM) * a + Math.log(cur.r) * e)
+      out.az = cur.az - 0.42 * a + (reduced ? 0 : 0.035 * Math.sin(t * 0.12) * intro)
+      out.el = cur.el + 0.22 * a
+      out.roll = cur.roll + 0.1 * a
+      out.name = cur.name * clamp((intro - 0.3) / 0.6)
+      // phones stack content full width, so the hole stays near the middle
+      if (portrait) {
+        out.sx *= 0.2
+        out.sy = Math.max(-0.2, Math.min(0.2, out.sy))
       }
+
       mouse.on += ((touch || reduced || intro < 1 ? 0 : 1) - mouse.on) * 0.05
-      bh.render(f, { time: reduced ? 12 : t, mouse: [mouse.x, mouse.y, 0.0011 * mouse.on], lock: 0, intro, flash: 0, sky: Math.min(1, e * 6) })
-      if (reduced && t > 0) cancelAnimationFrame(raf)
+      bh.render(out, { time: reduced ? 12 : t, mouse: [mouse.x, mouse.y, 0.0011 * mouse.on], lock: 0, intro, flash: 0, sky: Math.min(1, e * 6) })
+
+      // keep it smooth on slower GPUs: drop resolution when frames run long
+      ema += (now - start > 1000 ? (dt * 1000 - ema) * 0.05 : 0)
+      if ((checkIn += dt) > 1.5) {
+        checkIn = 0
+        if (ema > 24 && quality > 0.3) {
+          quality *= 0.85
+          fit()
+        }
+      }
     }
     raf = requestAnimationFrame(tick)
 
     return () => {
       cancelAnimationFrame(raf)
-      ro.disconnect()
       io.disconnect()
+      window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onMove)
       bh.dispose()
     }
-  }, [onReady])
+  }, [sections])
 
-  return <canvas ref={ref} data-lit={lit} className={className} aria-hidden="true" />
+  return <canvas ref={ref} aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />
 }

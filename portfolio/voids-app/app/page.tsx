@@ -1,4 +1,5 @@
 import { Deck, type DeckSection } from '@/components/Deck'
+import { VoidBackground } from '@/components/BlackHoleHero'
 import { CompanySavings } from '@/components/CompanySavings'
 import { Economics } from '@/components/Economics'
 import { EvidenceExplorer } from '@/components/EvidenceExplorer'
@@ -32,6 +33,7 @@ const SECTIONS: DeckSection[] = [
 export default function Page() {
   return (
     <Deck sections={SECTIONS}>
+      <VoidBackground sections={SECTIONS.map((s) => s.id)} />
       <div className="grid-bg pointer-events-none fixed inset-0 -z-10" />
       <Hero />
 

@@ -33,7 +33,7 @@ html {
 }
 body {
   font-family: var(--font-sans);
-  background: var(--color-void);
+  /* no background here: the black hole canvas sits behind the body, on the html's black */
 }
 i,
 em {

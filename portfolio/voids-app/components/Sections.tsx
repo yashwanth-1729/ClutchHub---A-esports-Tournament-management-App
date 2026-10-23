@@ -1,12 +1,11 @@
 'use client'
 
-import { useCallback, useState } from 'react'
 import { motion } from 'motion/react'
 import { ArrowRight, Mail } from 'lucide-react'
 import { FRONTIER } from '@/data/models'
 import { API_PRICES, APPLICATIONS, DEMAND, INDIA, PRIVACY, PROBLEM_FACTS, RISKS, type Fact } from '@/data/market'
 import { PRECISIONS, weightsGB } from '@/lib/memory'
-import { BlackHoleHero } from './BlackHoleHero'
+import { useWebgl } from '@/lib/gl/status'
 import { Concentration } from './Concentration'
 import { Cite, Tag } from './Slide'
 
@@ -14,15 +13,13 @@ const BF16 = PRECISIONS.find((p) => p.id === 'bf16')!
 const Q4 = PRECISIONS.find((p) => p.id === 'q4')!
 
 export function Hero() {
-  // null until we know; true when the WebGL black hole is drawing the name itself
-  const [webgl, setWebgl] = useState<boolean | null>(null)
-  const onReady = useCallback((ok: boolean) => setWebgl(ok), [])
+  // null until we know; true when the WebGL black hole behind the page is drawing the name itself
+  const webgl = useWebgl()
   const hole = webgl === true
   const late = (d: number) => (hole ? d + 4.6 : d) // under the black hole, the words wait for the disk to light
 
   return (
     <section id="hero" className="slide relative flex min-h-svh flex-col items-center overflow-hidden px-5 text-center">
-      <BlackHoleHero onReady={onReady} className={`absolute inset-0 h-full w-full transition-opacity duration-700 ${hole ? 'opacity-100' : 'opacity-0'}`} />
       {webgl === false ? <Concentration className="absolute inset-0 h-full w-full" /> : null}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(3,3,3,0.7)_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-void via-void/70 to-transparent" />
@@ -221,10 +218,11 @@ export function Commercial() {
 }
 
 export function Closing() {
+  const webgl = useWebgl()
   return (
     <section id="closing" className="slide relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-5 text-center">
-      <Concentration className="absolute inset-0 h-full w-full opacity-70" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,#030303_80%)]" />
+      {webgl === false ? <Concentration className="absolute inset-0 h-full w-full opacity-70" /> : null}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgba(3,3,3,0.75)_80%)]" />
       <div className="relative z-10 flex flex-col items-center">
         <p className="label mb-8">
           <span className="mr-3 text-warm">13</span>Closing
