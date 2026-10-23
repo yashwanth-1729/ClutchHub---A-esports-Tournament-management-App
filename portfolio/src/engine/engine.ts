@@ -226,9 +226,9 @@ export function startEngine(canvas: HTMLCanvasElement | null, opts: EngineOption
 
   // resolution adapts to how fast this GPU actually is
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
-  let quality = state.touch ? 0.42 : 0.62
-  const maxQuality = state.touch ? 0.6 : 0.9
-  if (renderer) renderer.steps = state.touch ? 110 : 170
+  let quality = state.touch ? 0.5 : 0.62
+  const maxQuality = state.touch ? 0.75 : 0.9
+  if (renderer) renderer.steps = state.touch ? 130 : 170
   // Resizing a canvas wipes it. Outside the frame loop (window or toolbar
   // resizes) the last frame is drawn again at once, so no empty frame is shown.
   let lastFrame: { f: CameraFrame; u: FrameUniforms } | null = null
@@ -341,6 +341,13 @@ export function startEngine(canvas: HTMLCanvasElement | null, opts: EngineOption
       drawn.fov = f.fov * 1.25
       // on a phone the name sits above the hole and the words below it
       drawn.sy += 0.04 * f.name
+      // Phones stack the words full width over the hole, so away from the opening and the end
+      // the hole stays centred, smaller and dimmer: a backdrop, never half cut off by an edge.
+      const calm = Math.max(0, 1 - f.name * 2) * Math.max(0, 1 - Math.max(0, f.heat - 0.84) * 6)
+      drawn.sx *= 1 - calm
+      drawn.sy += (0.06 - drawn.sy) * calm
+      drawn.r *= 1 + 0.3 * calm
+      drawn.dim *= 1 - 0.45 * calm
     }
 
     state.lock += (state.lockTarget - state.lock) * (state.lockTarget > state.lock ? 0.06 : 0.04)
